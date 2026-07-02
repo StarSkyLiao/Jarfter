@@ -9,6 +9,7 @@ public static class LinkedArrayRunTest
 
     public static void Run()
     {
+        // ReSharper disable once RedundantExplicitParamsArrayCreation
         Benchmark.RunQuickTest(new BenchmarkOption(50) { LoopCount = 200 }, [
             new MethodWrapper<int>(TailInsertLinkedArray),
             new MethodWrapper<int>(TailInsertList),

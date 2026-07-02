@@ -1,3 +1,4 @@
+// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
 namespace Jarfter.Core.Diagnostics;
 
 /// <summary>

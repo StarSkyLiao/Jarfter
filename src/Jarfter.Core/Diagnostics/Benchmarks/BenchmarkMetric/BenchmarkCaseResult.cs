@@ -21,6 +21,7 @@ public sealed record BenchmarkCaseResult<TResult>(MethodWrapper<TResult> Method,
     /// <returns>匹配结果, 不存在则返回 <c>null</c>.</returns>
     public BenchmarkMetricResult? GetMetric(BenchmarkMetricKind kind)
     {
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (int i = 0; i < Metrics.Count; i++)
         {
             BenchmarkMetricResult metric = Metrics[i];

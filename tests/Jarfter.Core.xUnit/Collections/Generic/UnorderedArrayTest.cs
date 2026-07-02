@@ -103,9 +103,10 @@ public sealed class UnorderedArrayTest
     [Fact]
     public void Create_WithCollectionAndComparer_ShouldUseComparerForLookup()
     {
-        UnorderedArray<string?> array = UnorderedArray.Create<string?>(
+        UnorderedArray<string?> array = UnorderedArray.Create(
             ["A", "B", null],
-            comparer: StringComparer.OrdinalIgnoreCase);
+            comparer: StringComparer.OrdinalIgnoreCase
+        );
 
         Assert.True(array.Contains("a"));
         Assert.True(array.Contains(null));
@@ -125,7 +126,7 @@ public sealed class UnorderedArrayTest
     [Fact]
     public void UniqueIndexedMode_CreateWithDuplicateCollection_ShouldThrowArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => UnorderedArray.CreateUnique<int>([1, 2, 1]));
+        Assert.Throws<ArgumentException>(() => UnorderedArray.CreateUnique([1, 2, 1]));
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public sealed class UnorderedArrayTest
     [Fact]
     public void UniqueIndexedMode_IndexerSetDuplicate_ShouldThrowAndKeepContent()
     {
-        UnorderedArray<int> array = UnorderedArray.CreateUnique<int>([1, 2, 3]);
+        UnorderedArray<int> array = UnorderedArray.CreateUnique([1, 2, 3]);
 
         Assert.Throws<ArgumentException>(() => array[0] = 2);
 
@@ -153,7 +154,7 @@ public sealed class UnorderedArrayTest
     [Fact]
     public void UniqueIndexedMode_RemoveAt_ShouldUpdateMovedElementIndex()
     {
-        UnorderedArray<int> array = UnorderedArray.CreateUnique<int>([1, 2, 3, 4]);
+        UnorderedArray<int> array = UnorderedArray.CreateUnique([1, 2, 3, 4]);
 
         array.RemoveAt(1);
 
@@ -177,6 +178,6 @@ public sealed class UnorderedArrayTest
     [Fact]
     public void Create_WithNullCollection_ShouldThrowArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => UnorderedArray.Create<int>((IEnumerable<int>)null!));
+        Assert.Throws<ArgumentNullException>(() => UnorderedArray.Create<int>(null!));
     }
 }

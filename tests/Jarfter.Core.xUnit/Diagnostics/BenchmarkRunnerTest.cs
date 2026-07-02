@@ -1,4 +1,5 @@
 using Jarfter.Core.Diagnostics;
+// ReSharper disable RedundantExplicitParamsArrayCreation
 
 namespace Jarfter.Core.xUnit.Diagnostics;
 
@@ -7,9 +8,10 @@ public sealed class BenchmarkRunnerTest
     [Fact]
     public void DefaultRunner_WithoutFullTest_ShouldTrimSlowestQuarterAndNormalizeByLoop()
     {
-        BenchmarkMetricDescriptor descriptor = new(BenchmarkMetricKind.Time, "FakeTime", "u", BenchmarkFlags.NoTimeTest);
-        DefaultBenchmarkRunner runner = new DefaultBenchmarkRunner(
-        [
+        BenchmarkMetricDescriptor descriptor = new BenchmarkMetricDescriptor(
+            BenchmarkMetricKind.Time, "FakeTime", "u", BenchmarkFlags.NoTimeTest
+        );
+        DefaultBenchmarkRunner runner = new DefaultBenchmarkRunner([
             new FixedCollector(descriptor, [8m, 4m, 12m, 16m]),
         ]);
 
@@ -29,9 +31,10 @@ public sealed class BenchmarkRunnerTest
     [Fact]
     public void DefaultRunner_WithFullTest_ShouldKeepAllSamples()
     {
-        BenchmarkMetricDescriptor descriptor = new(BenchmarkMetricKind.Time, "FakeTime", "u", BenchmarkFlags.NoTimeTest);
-        DefaultBenchmarkRunner runner = new DefaultBenchmarkRunner(
-        [
+        BenchmarkMetricDescriptor descriptor = new BenchmarkMetricDescriptor(
+            BenchmarkMetricKind.Time, "FakeTime", "u", BenchmarkFlags.NoTimeTest
+        );
+        DefaultBenchmarkRunner runner = new DefaultBenchmarkRunner([
             new FixedCollector(descriptor, [8m, 4m, 12m, 16m]),
         ]);
 
@@ -77,10 +80,13 @@ public sealed class BenchmarkRunnerTest
     [Fact]
     public void DefaultRunner_ShouldHonorMetricDisableFlags()
     {
-        BenchmarkMetricDescriptor timeDescriptor = new(BenchmarkMetricKind.Time, "Time", "u", BenchmarkFlags.NoTimeTest);
-        BenchmarkMetricDescriptor memoryDescriptor = new(BenchmarkMetricKind.Memory, "Memory", "u", BenchmarkFlags.NoMemoryTest);
-        DefaultBenchmarkRunner runner = new DefaultBenchmarkRunner(
-        [
+        BenchmarkMetricDescriptor timeDescriptor = new BenchmarkMetricDescriptor(
+            BenchmarkMetricKind.Time, "Time", "u", BenchmarkFlags.NoTimeTest
+        );
+        BenchmarkMetricDescriptor memoryDescriptor = new BenchmarkMetricDescriptor(
+            BenchmarkMetricKind.Memory, "Memory", "u", BenchmarkFlags.NoMemoryTest
+        );
+        DefaultBenchmarkRunner runner = new DefaultBenchmarkRunner([
             new FixedCollector(timeDescriptor, [1m]),
             new FixedCollector(memoryDescriptor, [2m]),
         ]);

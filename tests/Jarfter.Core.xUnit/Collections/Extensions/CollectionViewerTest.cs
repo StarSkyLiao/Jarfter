@@ -86,7 +86,7 @@ public sealed class CollectionViewerTest
             .WithDictionaryRight("}")
             .WithDictionarySplitter(" ; ")
             .WithNullLiteral("NULL")
-            .WithDictionaryWriter(static (in ViewOptions _, ICollectionDisplayer _, TextWriter textWriter, object _, object? _, uint _) => textWriter.Write("ITEM"));
+            .WithDictionaryWriter(static (in _, _, textWriter, _, _, _) => textWriter.Write("ITEM"));
 
         object?[] array = [1, null, 2];
         IDictionary dictionary = new Dictionary<string, int> { ["k1"] = 1, ["k2"] = 2 };

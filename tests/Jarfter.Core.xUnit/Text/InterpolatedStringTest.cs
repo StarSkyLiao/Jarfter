@@ -75,7 +75,7 @@ public sealed class InterpolatedStringTest
                 .Append("A")
                 .Append(true)
                 .Append(' ')
-                .Append((int)42)
+                .Append(42)
                 .Append(ReadOnlyMemory<char>.Empty)
                 .AppendLine("B")
                 .AppendLine();

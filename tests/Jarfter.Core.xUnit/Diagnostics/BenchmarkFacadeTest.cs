@@ -8,7 +8,7 @@ public sealed class BenchmarkFacadeTest
     public void Run_WithZeroIterations_ShouldThrow()
     {
         BenchmarkOption option = new BenchmarkOption(0);
-        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(() => Benchmark.Run(option, [new MethodWrapper<int>(() => 1)]));
+        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(() => Benchmark.Run(option, new MethodWrapper<int>(() => 1)));
         Assert.Equal("option.Iterations", exception.ParamName);
     }
 

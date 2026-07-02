@@ -324,9 +324,10 @@ public sealed class SpanListTest
     public void Indexer_ByRef_ShouldAllowInPlaceUpdate()
     {
         int[] buffer = [1, 2, 3];
-        SpanList<int> list = new SpanList<int>(buffer, 3);
-
-        list[1] = 42;
+        SpanList<int> list = new SpanList<int>(buffer, 3)
+        {
+            [1] = 42
+        };
 
         Assert.Equal([1, 42, 3], list.AsReadOnlySpan().ToArray());
     }

@@ -24,12 +24,14 @@ public sealed class BenchmarkDisplayerTest
         Assert.Contains("EMPTY", writer.ToString(), StringComparison.Ordinal);
     }
 
+    private static readonly decimal[] s_Samples = [1m, 2m];
+
     [Fact]
     public void JsonDisplayer_ShouldWriteStructuredJson()
     {
         BenchmarkMetricResult metric = new BenchmarkMetricResult(
             new BenchmarkMetricDescriptor(BenchmarkMetricKind.Time, "Time", "s", BenchmarkFlags.NoTimeTest),
-            new decimal[] { 1m, 2m },
+            s_Samples,
             new BenchmarkMetricStatistics(3m, 1.5m, 0.5m, 0.3333m));
 
         BenchmarkRunResult<int> result = new BenchmarkRunResult<int>(new BenchmarkOption(2) { LoopCount = 3 }, [
@@ -60,11 +62,9 @@ public sealed class BenchmarkDisplayerTest
 
         JsonBenchmarkDisplayer displayer = new JsonBenchmarkDisplayer(options);
 
-        BenchmarkRunResult<int> result = new(
-            new BenchmarkOption(1),
-            [
-                new BenchmarkCaseResult<int>(new MethodWrapper<int>(() => 1, "M"), 1, []),
-            ]);
+        BenchmarkRunResult<int> result = new BenchmarkRunResult<int>(new BenchmarkOption(1), [
+            new BenchmarkCaseResult<int>(new MethodWrapper<int>(() => 1, "M"), 1, []),
+        ]);
 
         using StringWriter writer = new StringWriter();
         Benchmark.Display(result, new BenchmarkViewOptions(), writer, displayer);

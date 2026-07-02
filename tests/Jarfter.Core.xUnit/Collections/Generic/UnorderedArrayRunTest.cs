@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Jarfter.Core.Collections.Generic;
 using Jarfter.Core.Diagnostics;
+// ReSharper disable RedundantExplicitParamsArrayCreation
 
 namespace Jarfter.Core.xUnit.Collections.Generic;
 
