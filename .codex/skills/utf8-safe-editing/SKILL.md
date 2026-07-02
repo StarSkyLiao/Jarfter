@@ -1,37 +1,37 @@
 ---
 name: utf8-safe-editing
-description: 以 UTF-8 无 BOM + CRLF 安全修改仓库文本文件. 当需要批量替换, 规范化写回, 或避免 PowerShell 文本写回导致乱码时使用.
+description: Safely edit repository text files as UTF-8 without BOM and with CRLF line endings. Use when replacing text, normalizing files, or avoiding PowerShell text-write encoding damage.
 ---
 
-# UTF-8 安全编辑
+# UTF-8 Safe Editing
 
-## 强制规则
+## Mandatory Rules
 
-1. 编辑项目文件时, 禁止使用 PowerShell `Get-Content`/`Set-Content`, `-replace`, 或临时字节转换链路写回.
-2. 优先使用 `apply_patch` 或 Python 显式 UTF-8 读写.
-3. 修改现有内容时优先替换式编辑.
-4. 允许全量重写, 但写回后必须校验 UTF-8 无 BOM 与 CRLF.
-5. 始终将源码文件视为 UTF-8.
+1. Do not use PowerShell `Get-Content`/`Set-Content`, `-replace`, or ad-hoc byte conversion pipelines to write repository text files.
+2. Prefer `apply_patch` for small edits and explicit Python byte/text handling for generated or rewritten files.
+3. Prefer targeted replacement over full-file rewriting when modifying existing content.
+4. Full rewrites are allowed only when followed by validation for UTF-8 without BOM and CRLF line endings.
+5. Treat source files as UTF-8. If visible terminal output looks garbled, verify with Python or bytes before changing content.
 
-## 工具命令
+## Tool Commands
 
 ```powershell
-# 文本替换
-python skills/utf8-safe-editing/scripts/text_safe_edit.py replace --file <path> --old <old> --new <new> --fail-if-missing
+# Literal replacement
+python .codex/skills/utf8-safe-editing/scripts/text_safe_edit.py replace --file <path> --old <old> --new <new> --fail-if-missing
 
-# 正则替换
-python skills/utf8-safe-editing/scripts/text_safe_edit.py regex-replace --file <path> --pattern <regex> --repl <text> --fail-if-missing
+# Regex replacement
+python .codex/skills/utf8-safe-editing/scripts/text_safe_edit.py regex-replace --file <path> --pattern <regex> --repl <text> --fail-if-missing
 
-# 规范化空行与换行
-python skills/utf8-safe-editing/scripts/text_safe_edit.py normalize --file <path> --max-blank-lines 1
+# Normalize blank lines and line endings
+python .codex/skills/utf8-safe-editing/scripts/text_safe_edit.py normalize --file <path> --max-blank-lines 1
 
-# 写回后校验
-python skills/utf8-safe-editing/scripts/text_safe_check.py --file <path>
+# Validate after writing
+python .codex/skills/utf8-safe-editing/scripts/text_safe_check.py --file <path>
 ```
 
-## 错误示例与正确命令
+## Incorrect and Correct Patterns
 
-### 错误示例 1, PowerShell 文本写回
+### Pattern 1: PowerShell Text Rewrite
 
 ```powershell
 # Wrong
@@ -40,46 +40,46 @@ Get-Content -Raw $file | ForEach-Object { $_ -replace 'A', 'B' } | Set-Content $
 
 ```powershell
 # Correct
-python skills/utf8-safe-editing/scripts/text_safe_edit.py replace --file "<path>" --old "A" --new "B" --fail-if-missing
-python skills/utf8-safe-editing/scripts/text_safe_check.py --file "<path>"
+python .codex/skills/utf8-safe-editing/scripts/text_safe_edit.py replace --file "<path>" --old "A" --new "B" --fail-if-missing
+python .codex/skills/utf8-safe-editing/scripts/text_safe_check.py --file "<path>"
 ```
 
-### 错误示例 2, 不受控插入空行
+### Pattern 2: Uncontrolled Blank-Line Insertion
 
 ```python
 # Wrong
-text = text.replace('X', 'X\n\n\n')
+text = text.replace("X", "X\n\n\n")
 ```
 
 ```python
 # Correct
 normalized = []
 for line in text.splitlines():
-    if line.strip() == '' and normalized and normalized[-1].strip() == '':
+    if line.strip() == "" and normalized and normalized[-1].strip() == "":
         continue
     normalized.append(line)
-text = '\r\n'.join(normalized).rstrip('\r\n') + '\r\n'
+text = "\r\n".join(normalized).rstrip("\r\n") + "\r\n"
 ```
 
-### 错误示例 3, 在损坏文本上继续修改
+### Pattern 3: Continuing From Damaged Text
 
 ```python
-# Correct, 先恢复可信 UTF-8 原文再编辑
+# Correct: restore trusted UTF-8 content before editing.
 import subprocess
 from pathlib import Path
 
-repo = Path(r'E:\C#Library\Jarfter\Jarfter')
+repo = Path(r"E:\Dotnet\Jarfter")
 raw = subprocess.run([
-    'git', 'cat-file', '-p', 'HEAD:skills/csharp-commenting-zh/SKILL.md'
+    "git", "cat-file", "-p", "HEAD:.codex/skills/csharp-commenting-zh/SKILL.md"
 ], cwd=repo, capture_output=True, check=True).stdout
-text = raw.decode('utf-8')
-text = text.replace('旧内容', '新内容')
-Path('<target>').write_bytes(text.replace('\n', '\r\n').encode('utf-8'))
+text = raw.decode("utf-8")
+text = text.replace("old content", "new content")
+Path("<target>").write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
 ```
 
-## 推荐执行顺序
+## Recommended Order
 
-1. 先执行替换式修改.
-2. 再执行 `normalize` 或必要的全量改写.
-3. 最后执行 `text_safe_check.py`.
-4. 校验失败时立即修复, 不在异常状态继续编辑.
+1. Apply a targeted replacement first.
+2. Run `normalize` only when blank lines or line endings need cleanup.
+3. Run `text_safe_check.py` after every write.
+4. If validation fails, fix the encoding or line endings immediately before continuing.

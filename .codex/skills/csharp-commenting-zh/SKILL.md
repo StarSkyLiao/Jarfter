@@ -24,4 +24,3 @@ description: 统一 C# 注释规范. 当需要为 public 或 internal API 补齐
 ## 协作技能
 
 - 涉及文件写入, 编码校验, 换行校验时, 同时使用 [$utf8-safe-editing](../utf8-safe-editing/SKILL.md).
-- 涉及最小构建与测试回归时, 同时使用 [$dotnet-minimal-checks](../dotnet-minimal-checks/SKILL.md).

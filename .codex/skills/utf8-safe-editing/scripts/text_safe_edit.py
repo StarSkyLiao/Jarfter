@@ -13,15 +13,20 @@ import re
 import sys
 from pathlib import Path
 
+UTF8_BOM = b"\xef\xbb\xbf"
+
 def _read_text_utf8(path: Path) -> str:
-    return path.read_text(encoding="utf-8")
+    data = path.read_bytes()
+    if data.startswith(UTF8_BOM):
+        data = data[len(UTF8_BOM):]
+    return data.decode("utf-8")
 
 def _to_crlf(text: str) -> str:
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     return normalized.replace("\n", "\r\n")
 
 def _write_text_utf8_crlf(path: Path, text: str) -> None:
-    path.write_text(_to_crlf(text), encoding="utf-8", newline="")
+    path.write_bytes(_to_crlf(text).encode("utf-8"))
 
 def _compress_blank_lines(text: str, max_blank_lines: int) -> str:
     if max_blank_lines < 0:
