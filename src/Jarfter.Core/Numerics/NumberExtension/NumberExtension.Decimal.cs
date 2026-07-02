@@ -3,6 +3,9 @@ using System.Runtime.CompilerServices;
 
 namespace Jarfter.Core.Numerics;
 
+/// <summary>
+/// 提供 decimal 数值的常用扩展运算。
+/// </summary>
 public static partial class NumberExtension
 {
     extension(decimal value)

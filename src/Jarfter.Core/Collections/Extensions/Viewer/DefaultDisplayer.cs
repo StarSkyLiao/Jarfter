@@ -2,11 +2,17 @@ using System.Collections;
 
 namespace Jarfter.Core.Collections.Extensions;
 
+/// <summary>
+/// 提供默认的集合与字典文本展示实现。
+/// </summary>
 public class DefaultDisplayer: ICollectionDisplayer
 {
     private DefaultDisplayer(){}
     static DefaultDisplayer() {} // 强制去掉 beforefieldinit, 要求懒加载该类型
 
+    /// <summary>
+    /// 获取默认展示器的全局单例实例。
+    /// </summary>
     public static readonly DefaultDisplayer Instance = new DefaultDisplayer();
 
     void ICollectionDisplayer.WriteEnumerable(in ViewOptions viewOptions, TextWriter textWriter, IEnumerable enumerable, uint depth)
