@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+artifacts/
+
+# IDE and editor files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Local packages and caches
+*.nupkg
+*.snupkg
+
+# Optional local worktrees
+.worktrees/
