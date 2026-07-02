@@ -1,0 +1,4 @@
+interface:
+  display_name: "C# 语法样式规范"
+  short_description: "按指定的风格检查和修正 C# 语法与命名样式"
+  default_prompt: "按指定的 C# 语法样式规范检查并修正当前变更"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "收尾变更审查"
+  short_description: "在收尾阶段审查本地Git变更，检查缺陷、性能、注释与可读性"
+  default_prompt: "在任务收尾阶段审查当前本地Git变更，按严重级别报告潜在bug；仅在明确高性能路径上评估性能与GC风险；参照csharp-commenting-zh检查C#注释规范；并指出低可读性代码问题。"

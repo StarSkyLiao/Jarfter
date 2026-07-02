@@ -1,0 +1,4 @@
+interface:
+  display_name: "UTF-8 安全编辑"
+  short_description: "使用 Python 工具安全修改并校验 UTF-8 无 BOM + CRLF"
+  default_prompt: "按 UTF-8 安全规则修改并校验文本文件"

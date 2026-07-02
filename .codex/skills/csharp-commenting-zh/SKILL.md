@@ -1,0 +1,27 @@
+---
+name: csharp-commenting-zh
+description: 统一 C# 注释规范. 当需要为 public 或 internal API 补齐 XML 注释, 为复杂方法关键步骤添加中文注释, 或修正注释标点时使用.
+---
+
+# C# 中文注释规范
+
+## 强制规则
+
+1. 任何 `public` 或 `internal` API 都必须有 XML 注释.
+2. API 范围包含: 类型, 构造函数, 方法, 属性, 事件, 字段, 委托, 枚举成员, 扩展方法.
+3. XML 注释至少包含 `<summary>`, 按语义补充 `<param>` 和 `<returns>`.
+4. 复杂方法必须在关键步骤位置添加注释, 重点写原因与约束.
+5. 所有代码注释使用中文, 标点使用英文标点.
+
+## 执行流程
+
+1. 扫描本次变更中的 `.cs` 文件, 定位缺失 XML 注释的 `public` 或 `internal` API.
+2. 为缺失项补齐 XML 注释, 保持语义准确且简洁.
+3. 识别复杂方法中的关键步骤, 添加中文注释说明原因与约束.
+4. 检查注释标点, 统一替换为英文标点.
+5. 只改注释相关内容, 不改变业务行为.
+
+## 协作技能
+
+- 涉及文件写入, 编码校验, 换行校验时, 同时使用 [$utf8-safe-editing](../utf8-safe-editing/SKILL.md).
+- 涉及最小构建与测试回归时, 同时使用 [$dotnet-minimal-checks](../dotnet-minimal-checks/SKILL.md).

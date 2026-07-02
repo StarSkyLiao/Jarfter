@@ -1,0 +1,4 @@
+interface:
+  display_name: "C# 中文注释规范"
+  short_description: "补齐 API XML 注释与复杂方法关键注释"
+  default_prompt: "按仓库规范检查并修复 C# 注释"
