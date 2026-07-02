@@ -57,3 +57,15 @@ description: 统一 C# 语法样式. 当新增或修改 C# 代码, 审查 C# 风
 - 测试类使用大驼峰并以被测类型或能力命名, 通常为 `sealed class`.
 - 测试方法使用 `Subject_WhenCondition_ShouldResult` 命名.
 - 测试数据集合优先使用集合表达式, 除非要验证特定构造函数或集合类型行为.
+
+# 使用 Resharper 检查代码
+- 在收尾阶段, 可以考虑使用 Resharper 引擎检查一次代码样式问题.
+- 如果本地不支持 Resharper 引擎, 可以跳过这一步.
+- 该检查耗时较长, 尽可能缩小检查范围( `Jarfter.sln` 可以更换为具体的项目), 减少检查次数(仅在收尾阶段执行).
+- 使用下面的代码进行检查, 输出文件位于 `output.txt` 中.
+- 可以使用 `--format=Xml` 选项来指定生成体积更小的 `xml` 输出, 也可以使用默认更规范的 `SARIF` 格式输出.
+- 并非强制处理所有给出的问题, 优先处理极其明显且容易修正的即可. 未处理的问题需要告知用户.
+```powershell
+$cache = Join-Path $env:TEMP ("jarfter-inspect-cache-" + [guid]::NewGuid().ToString("N"))
+jb inspectcode Jarfter.sln --no-build --output=output.txt --caches-home=$cache --severity=SUGGESTION
+```
