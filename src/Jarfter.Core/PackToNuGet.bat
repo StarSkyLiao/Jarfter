@@ -1,0 +1,1 @@
+dotnet pack Jarfter.Core.csproj -c Release -o ..\..\artifacts\packages
