@@ -2,12 +2,12 @@ using Jarfter.Core.Delegates;
 
 namespace Jarfter.Core.xUnit.Delegates;
 
-public sealed class DelegateListTest
+public sealed class ActionListTest
 {
     [Fact]
     public void Invoke_WhenNoSubscribers_ShouldDoNothing()
     {
-        DelegateList list = new DelegateList();
+        ActionList list = new ActionList();
 
         list.Invoke();
     }
@@ -15,7 +15,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_WithSubscriptions_ShouldInvokeInOrder()
     {
-        DelegateList list = new DelegateList();
+        ActionList list = new ActionList();
         List<int> calls = [];
 
         list.Subscribe(() => calls.Add(1));
@@ -29,7 +29,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Unsubscribe_WhenDuplicateSubscription_ShouldRemoveOneSubscription()
     {
-        DelegateList list = new DelegateList();
+        ActionList list = new ActionList();
         int count = 0;
         void Handler() => count++;
 
@@ -45,7 +45,7 @@ public sealed class DelegateListTest
     [Fact]
     public void CompoundOperators_ShouldSubscribeAndUnsubscribe()
     {
-        DelegateList list = new DelegateList();
+        ActionList list = new ActionList();
         int count = 0;
         void Handler() => count++;
 
@@ -60,7 +60,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_WhenSubscriberUnsubscribes_ShouldThrowInvalidOperationException()
     {
-        DelegateList list = new DelegateList();
+        ActionList list = new ActionList();
         List<int> calls = [];
         void Second() => calls.Add(2);
         void First()
@@ -74,14 +74,14 @@ public sealed class DelegateListTest
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(list.Invoke);
 
-        Assert.Equal("DelegateList cannot be modified while it is invoking delegates.", exception.Message);
+        Assert.Equal("Delegate list cannot be modified while it is invoking delegates.", exception.Message);
         Assert.Equal([1], calls);
     }
 
     [Fact]
     public void Invoke_WhenSubscriberSubscribes_ShouldThrowInvalidOperationException()
     {
-        DelegateList list = new DelegateList();
+        ActionList list = new ActionList();
         void Second()
         {
         }
@@ -90,13 +90,13 @@ public sealed class DelegateListTest
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(list.Invoke);
 
-        Assert.Equal("DelegateList cannot be modified while it is invoking delegates.", exception.Message);
+        Assert.Equal("Delegate list cannot be modified while it is invoking delegates.", exception.Message);
     }
 
     [Fact]
     public void Invoke_ForGenericDelegateWhenSubscriberSubscribes_ShouldThrowInvalidOperationException()
     {
-        DelegateList<int> list = new DelegateList<int>();
+        ActionList<int> list = new ActionList<int>();
         void Second(int value)
         {
         }
@@ -105,13 +105,13 @@ public sealed class DelegateListTest
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => list.Invoke(1));
 
-        Assert.Equal("DelegateList cannot be modified while it is invoking delegates.", exception.Message);
+        Assert.Equal("Delegate list cannot be modified while it is invoking delegates.", exception.Message);
     }
 
     [Fact]
     public void Subscribe_WithNullAction_ShouldThrowArgumentNullException()
     {
-        DelegateList list = new DelegateList();
+        ActionList list = new ActionList();
 
         Assert.Throws<ArgumentNullException>(() => list.Subscribe(null!));
     }
@@ -119,7 +119,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_ForOneArgumentDelegate_ShouldForwardArguments()
     {
-        DelegateList<int> list = new DelegateList<int>();
+        ActionList<int> list = new ActionList<int>();
         int received = 0;
 
         list += value => received = value;
@@ -131,7 +131,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_ForTwoArgumentDelegate_ShouldForwardArguments()
     {
-        DelegateList<int, int> list = new DelegateList<int, int>();
+        ActionList<int, int> list = new ActionList<int, int>();
         int received = 0;
 
         list += (arg1, arg2) => received = arg1 + arg2;
@@ -143,7 +143,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_ForThreeArgumentDelegate_ShouldForwardArguments()
     {
-        DelegateList<int, int, int> list = new DelegateList<int, int, int>();
+        ActionList<int, int, int> list = new ActionList<int, int, int>();
         int received = 0;
 
         list += (arg1, arg2, arg3) => received = arg1 + arg2 + arg3;
@@ -155,7 +155,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_ForFourArgumentDelegate_ShouldForwardArguments()
     {
-        DelegateList<int, int, int, int> list = new DelegateList<int, int, int, int>();
+        ActionList<int, int, int, int> list = new ActionList<int, int, int, int>();
         int received = 0;
 
         list += (arg1, arg2, arg3, arg4) => received = arg1 + arg2 + arg3 + arg4;
@@ -167,7 +167,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_ForFiveArgumentDelegate_ShouldForwardArguments()
     {
-        DelegateList<int, int, int, int, int> list = new DelegateList<int, int, int, int, int>();
+        ActionList<int, int, int, int, int> list = new ActionList<int, int, int, int, int>();
         int received = 0;
 
         list += (arg1, arg2, arg3, arg4, arg5) => received = arg1 + arg2 + arg3 + arg4 + arg5;
@@ -179,7 +179,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_ForSixArgumentDelegate_ShouldForwardArguments()
     {
-        DelegateList<int, int, int, int, int, int> list = new DelegateList<int, int, int, int, int, int>();
+        ActionList<int, int, int, int, int, int> list = new ActionList<int, int, int, int, int, int>();
         int received = 0;
 
         list += (arg1, arg2, arg3, arg4, arg5, arg6) => received = arg1 + arg2 + arg3 + arg4 + arg5 + arg6;
@@ -191,7 +191,7 @@ public sealed class DelegateListTest
     [Fact]
     public void Invoke_ForSevenArgumentDelegate_ShouldForwardArguments()
     {
-        DelegateList<int, int, int, int, int, int, int> list = new DelegateList<int, int, int, int, int, int, int>();
+        ActionList<int, int, int, int, int, int, int> list = new ActionList<int, int, int, int, int, int, int>();
         int received = 0;
 
         list += (arg1, arg2, arg3, arg4, arg5, arg6, arg7) => received = arg1 + arg2 + arg3 + arg4 + arg5 + arg6 + arg7;

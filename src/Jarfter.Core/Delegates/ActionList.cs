@@ -4,7 +4,7 @@ namespace Jarfter.Core.Delegates;
 /// 表示无参数 <see cref="Action"/> 委托的轻量订阅列表.
 /// 适用于需要按订阅顺序广播回调, 且不允许在回调执行期间修改订阅关系的场景.
 /// </summary>
-public sealed class DelegateList
+public sealed class ActionList
 {
     private DelegateCollection<Action> m_Delegates;
 

@@ -98,7 +98,7 @@ internal struct DelegateCollection<TDelegate> where TDelegate : Delegate
     {
         if (m_InvokeDepth > 0)
         {
-            throw new InvalidOperationException("DelegateList cannot be modified while it is invoking delegates.");
+            throw new InvalidOperationException("Delegate list cannot be modified while it is invoking delegates.");
         }
     }
 }
