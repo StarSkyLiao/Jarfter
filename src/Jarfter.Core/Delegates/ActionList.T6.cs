@@ -15,6 +15,11 @@ public sealed class ActionList<T1, T2, T3, T4, T5, T6>
     private DelegateCollection<Action<T1, T2, T3, T4, T5, T6>> m_Delegates;
 
     /// <summary>
+    /// 获取当前委托链的委托数量.
+    /// </summary>
+    public int Count => m_Delegates.Count;
+
+    /// <summary>
     /// 订阅一个委托.
     /// </summary>
     /// <param name="action">需要订阅的委托.</param>

@@ -15,6 +15,16 @@ internal struct DelegateCollection<TDelegate> where TDelegate : Delegate
     public object? DelegateList { get; private set; }
 
     /// <summary>
+    /// 获取当前委托链的委托数量.
+    /// </summary>
+    public int Count => DelegateList switch
+    {
+        null => 0,
+        TDelegate => 1,
+        List<TDelegate> list => list.Count
+    };
+
+    /// <summary>
     /// 订阅一个委托.
     /// </summary>
     /// <param name="action">需要订阅的委托.</param>
