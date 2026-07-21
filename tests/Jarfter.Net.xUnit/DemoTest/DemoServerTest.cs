@@ -45,22 +45,18 @@ internal static class DemoServerTest
         void PatchMsg()
         {
             INetMsgDispatcher dispatcher = webApplication.Services.GetRequiredService<INetMsgDispatcher>();
-            dispatcher.On(nameof(DemoProtocolTest.C2SNoRspReq),
-                new DefaultNetMsgEnvelopeHandler<DemoProtocolTest.C2SNoRspReq>((message, _, _) =>
-                {
-                    Console.WriteLine($"Received {message.Text}");
-                    return ValueTask.CompletedTask;
-                })
-            );
-            dispatcher.On(nameof(DemoProtocolTest.C2SAskReq),
-                new DefaultNetMsgEnvelopeRepliedHandler<DemoProtocolTest.C2SAskReq>((_, envelope, _) =>
-                {
-                    Console.WriteLine($"Received {nameof(DemoProtocolTest.C2SAskReq)} from {envelope.ConnectionId}");
-                    return new ValueTask<NetResponse>(new NetResponse(nameof(DemoProtocolTest.C2SAskReq),
-                        JsonSerializer.SerializeToElement(100))
-                    );
-                })
-            );
+            dispatcher.On(new DefaultNetMsgEnvelopeHandler<DemoProtocolTest.C2SNoRspReq>((message, _, _) =>
+            {
+                Console.WriteLine($"Received {message.Text}");
+                return ValueTask.CompletedTask;
+            }));
+            dispatcher.On(new DefaultNetMsgEnvelopeRepliedHandler<DemoProtocolTest.C2SAskReq>((_, envelope, _) =>
+            {
+                Console.WriteLine($"Received {nameof(DemoProtocolTest.C2SAskReq)} from {envelope.ConnectionId}");
+                return new ValueTask<NetResponse>(new NetResponse(nameof(DemoProtocolTest.C2SAskReq),
+                    JsonSerializer.SerializeToElement(100))
+                );
+            }));
         }
     }
 }

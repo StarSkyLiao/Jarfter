@@ -1,5 +1,4 @@
 using Jarfter.Net.Protocol.SignalR;
-using Microsoft.AspNetCore.SignalR;
 
 namespace Jarfter.Net.Server.Message.Context;
 

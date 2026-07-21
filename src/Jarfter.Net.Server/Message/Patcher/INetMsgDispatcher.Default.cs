@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Jarfter.Net.Protocol.Message;
 using Jarfter.Net.Protocol.SignalR;
 using Jarfter.Net.Server.Message.Context;
 
@@ -47,6 +48,20 @@ public class DefaultNetMsgDispatcher : INetMsgDispatcher
     }
 
     /// <inheritdoc />
+    public NetMsgPatcherHandle On<TMessage>(INetMsgEnvelopeHandler<TMessage> handler) where TMessage : INetMessage<TMessage>
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+
+        if (!m_Handlers.TryAdd(TMessage.MessageName, handler))
+        {
+            ThrowsForMultiTimeRegistered(TMessage.MessageName);
+        }
+        Guid subscriptionId = Guid.CreateVersion7();
+        m_GuidToName.TryAdd(subscriptionId, TMessage.MessageName);
+        return new NetMsgPatcherHandle(TMessage.MessageName, subscriptionId);
+    }
+
+    /// <inheritdoc />
     public NetMsgPatcherHandle On(string messageType, INetMsgEnvelopeRepliedHandler handler)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
@@ -74,6 +89,20 @@ public class DefaultNetMsgDispatcher : INetMsgDispatcher
         Guid subscriptionId = Guid.CreateVersion7();
         m_GuidToName.TryAdd(subscriptionId, messageType);
         return new NetMsgPatcherHandle(messageType, subscriptionId);
+    }
+
+    /// <inheritdoc />
+    public NetMsgPatcherHandle On<TMessage>(INetMsgEnvelopeRepliedHandler<TMessage> handler) where TMessage : INetMessage<TMessage>
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+
+        if (!m_Handlers.TryAdd(TMessage.MessageName, handler))
+        {
+            ThrowsForMultiTimeRegistered(TMessage.MessageName);
+        }
+        Guid subscriptionId = Guid.CreateVersion7();
+        m_GuidToName.TryAdd(subscriptionId, TMessage.MessageName);
+        return new NetMsgPatcherHandle(TMessage.MessageName, subscriptionId);
     }
 
     /// <inheritdoc />

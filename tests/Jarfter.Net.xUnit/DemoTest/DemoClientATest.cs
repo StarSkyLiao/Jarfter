@@ -28,16 +28,10 @@ internal static class DemoClientATest
     public static async Task<NetClient> HandlePlayerA()
     {
         NetClient playerA = await InitClient();
-        await playerA.SendMessageAsync(new NetMessage(
-            nameof(DemoProtocolTest.C2SNoRspReq), JsonSerializer.SerializeToElement(
-                new DemoProtocolTest.C2SNoRspReq($"client message from {playerA.Connection.ConnectionId}")
-            )
-        ));
-        int askResult = await playerA.RequestAsync<int>(new NetMessage(
-            nameof(DemoProtocolTest.C2SAskReq), JsonSerializer.SerializeToElement(
-                new DemoProtocolTest.C2SAskReq()
-            )
-        ));
+        await playerA.SendMessageAsync(new DemoProtocolTest.C2SNoRspReq(
+            $"client message from {playerA.Connection.ConnectionId}")
+        );
+        int askResult = await playerA.RequestAsync(new DemoProtocolTest.C2SAskReq());
         Console.WriteLine($"Player {playerA.Connection.ConnectionId} received ask result: {askResult}");
         return playerA;
     }
