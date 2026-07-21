@@ -21,7 +21,8 @@ internal struct DelegateCollection<TDelegate> where TDelegate : Delegate
     {
         null => 0,
         TDelegate => 1,
-        List<TDelegate> list => list.Count
+        List<TDelegate> list => list.Count,
+        _ => throw new NotImplementedException() // Replace it with union when available
     };
 
     /// <summary>
