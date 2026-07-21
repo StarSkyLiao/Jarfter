@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Data;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Jarfter.Net.Protocol.Message;
 using Jarfter.Net.Protocol.SignalR;
@@ -15,40 +13,10 @@ public class DefaultNetMsgDispatcher : INetMsgDispatcher
 {
     private readonly ConcurrentDictionary<Guid, string> m_GuidToName = [];
 
-    private readonly ConcurrentDictionary<string, object> m_Handlers = [];
+    private readonly ConcurrentDictionary<string, INetMsgHandler> m_Handlers = [];
 
     /// <inheritdoc />
-    public NetMsgPatcherHandle On(string messageType, INetMsgEnvelopeHandler handler)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
-        ArgumentNullException.ThrowIfNull(handler);
-
-        if (!m_Handlers.TryAdd(messageType, handler))
-        {
-            ThrowsForMultiTimeRegistered(messageType);
-        }
-        Guid subscriptionId = Guid.CreateVersion7();
-        m_GuidToName.TryAdd(subscriptionId, messageType);
-        return new NetMsgPatcherHandle(messageType, subscriptionId);
-    }
-
-    /// <inheritdoc />
-    public NetMsgPatcherHandle On<TIn>(string messageType, INetMsgEnvelopeHandler<TIn> handler)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
-        ArgumentNullException.ThrowIfNull(handler);
-
-        if (!m_Handlers.TryAdd(messageType, handler))
-        {
-            ThrowsForMultiTimeRegistered(messageType);
-        }
-        Guid subscriptionId = Guid.CreateVersion7();
-        m_GuidToName.TryAdd(subscriptionId, messageType);
-        return new NetMsgPatcherHandle(messageType, subscriptionId);
-    }
-
-    /// <inheritdoc />
-    public NetMsgPatcherHandle On<TMessage>(INetMsgEnvelopeHandler<TMessage> handler) where TMessage : INetMessage<TMessage>
+    public NetMsgPatcherHandle On<TMessage>(INetMsgHandler<TMessage> handler) where TMessage : INetRequest<TMessage>
     {
         ArgumentNullException.ThrowIfNull(handler);
 
@@ -62,37 +30,8 @@ public class DefaultNetMsgDispatcher : INetMsgDispatcher
     }
 
     /// <inheritdoc />
-    public NetMsgPatcherHandle On(string messageType, INetMsgEnvelopeRepliedHandler handler)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
-        ArgumentNullException.ThrowIfNull(handler);
-
-        if (!m_Handlers.TryAdd(messageType, handler))
-        {
-            ThrowsForMultiTimeRegistered(messageType);
-        }
-        Guid subscriptionId = Guid.CreateVersion7();
-        m_GuidToName.TryAdd(subscriptionId, messageType);
-        return new NetMsgPatcherHandle(messageType, subscriptionId);
-    }
-
-    /// <inheritdoc />
-    public NetMsgPatcherHandle On<TIn>(string messageType, INetMsgEnvelopeRepliedHandler<TIn> handler)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageType);
-        ArgumentNullException.ThrowIfNull(handler);
-
-        if (!m_Handlers.TryAdd(messageType, handler))
-        {
-            ThrowsForMultiTimeRegistered(messageType);
-        }
-        Guid subscriptionId = Guid.CreateVersion7();
-        m_GuidToName.TryAdd(subscriptionId, messageType);
-        return new NetMsgPatcherHandle(messageType, subscriptionId);
-    }
-
-    /// <inheritdoc />
-    public NetMsgPatcherHandle On<TMessage>(INetMsgEnvelopeRepliedHandler<TMessage> handler) where TMessage : INetMessage<TMessage>
+    public NetMsgPatcherHandle On<TMessage, TResponse>(INetMsgHandler<TMessage, TResponse> handler)
+        where TMessage : INetRequest<TMessage, TResponse>
     {
         ArgumentNullException.ThrowIfNull(handler);
 
@@ -111,7 +50,7 @@ public class DefaultNetMsgDispatcher : INetMsgDispatcher
         if (!handle.IsValid) return false;
         if (!m_GuidToName.TryRemove(handle.SubscriptionId, out string? messageType)) return false;
         if (handle.MessageType != messageType) ThrowsForInvalidPatcherHandle(handle, messageType);
-        return m_Handlers.TryRemove(messageType, out object? _);
+        return m_Handlers.TryRemove(messageType, out INetMsgHandler? _);
     }
 
     /// <inheritdoc />
@@ -119,27 +58,14 @@ public class DefaultNetMsgDispatcher : INetMsgDispatcher
     {
         ArgumentNullException.ThrowIfNull(envelope);
 
-        if (!m_Handlers.TryGetValue(envelope.Message.Name, out object? handlers)) return null;
-
-        switch (handlers)
-        {
-            case INetMsgEnvelopeHandler envelopeHandler:
-            {
-                await envelopeHandler.HandleAsync(envelope, cancellationToken);
-                return null;
-            }
-            case INetMsgEnvelopeRepliedHandler repliedHandler:
-            {
-                return await repliedHandler.HandleAsync(envelope, cancellationToken);
-            }
-            default: throw new UnreachableException();
-        }
+        if (!m_Handlers.TryGetValue(envelope.Message.Name, out INetMsgHandler? handlers)) return null;
+        return await handlers.HandleResultAsync(envelope, cancellationToken);
     }
 
     [DoesNotReturn]
     private static void ThrowsForMultiTimeRegistered(string messageType)
     {
-        throw new DuplicateNameException($"The given message type {messageType} is registered multi-times.");
+        throw new NotSupportedException($"The given message type {messageType} is registered multi-times.");
     }
 
     [DoesNotReturn]

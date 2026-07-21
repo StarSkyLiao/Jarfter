@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-using Jarfter.Net.Client.Connection;
-using Jarfter.Net.Protocol.SignalR;
+﻿using Jarfter.Net.Client.Connection;
 
 namespace Jarfter.Net.xUnit.DemoTest;
 

@@ -19,14 +19,14 @@ public partial class NetClient
     /// <summary>
     /// 向服务端提交指定房间中的通用消息.
     /// </summary>
-    /// <param name="message">要提交的消息包.</param>
+    /// <param name="request">要提交的消息包.</param>
     /// <param name="cancelToken">用于取消异步调用的令牌.</param>
     /// <returns>表示异步调用过程的任务.</returns>
-    public ValueTask SendMessageAsync<TMessage>(INetMessage<TMessage> message, CancellationToken cancelToken = default)
-        where TMessage : INetMessage<TMessage>
+    public ValueTask SendMessageAsync<TMessage>(INetRequest<TMessage> request, CancellationToken cancelToken = default)
+        where TMessage : INetRequest<TMessage>
     {
         NetMessage netMessage = new NetMessage(TMessage.MessageName,
-            TMessage.SerializeToElement(message), Guid.CreateVersion7()
+            TMessage.SerializeToElement(request), Guid.CreateVersion7()
         );
         return new ValueTask(Connection.InvokeAsync(HubMethods.SendMsg, netMessage, cancelToken));
     }
@@ -53,7 +53,7 @@ public partial class NetClient
     /// <param name="cancelToken">用于取消异步调用的令牌.</param>
     /// <returns>服务端处理程序返回的结果.</returns>
     public async ValueTask<TOut?> RequestAsync<TMessage, TOut>(INetRequest<TMessage, TOut> message, CancellationToken cancelToken = default)
-        where TMessage : INetMessage<TMessage>
+        where TMessage : INetRequest<TMessage, TOut>
     {
         NetMessage netMessage = new NetMessage(TMessage.MessageName,
             TMessage.SerializeToElement(message), Guid.CreateVersion7()

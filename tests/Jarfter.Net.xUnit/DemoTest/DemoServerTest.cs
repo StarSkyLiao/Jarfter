@@ -1,7 +1,4 @@
-﻿using System.Text.Json;
-using Jarfter.Net.Client.Connection;
-using Jarfter.Net.Protocol.SignalR;
-using Jarfter.Net.Server.Connection;
+﻿using Jarfter.Net.Server.Connection;
 using Jarfter.Net.Server.Hosting;
 using Jarfter.Net.Server.Message.Context;
 using Jarfter.Net.Server.Message.Patcher;
@@ -45,17 +42,15 @@ internal static class DemoServerTest
         void PatchMsg()
         {
             INetMsgDispatcher dispatcher = webApplication.Services.GetRequiredService<INetMsgDispatcher>();
-            dispatcher.On(new DefaultNetMsgEnvelopeHandler<DemoProtocolTest.C2SNoRspReq>((message, _, _) =>
+            dispatcher.On(new DefaultNetMsgHandler<DemoProtocolTest.C2SNoRspReq>((message, _, _) =>
             {
                 Console.WriteLine($"Received {message.Text}");
                 return ValueTask.CompletedTask;
             }));
-            dispatcher.On(new DefaultNetMsgEnvelopeRepliedHandler<DemoProtocolTest.C2SAskReq>((_, envelope, _) =>
+            dispatcher.On(new DefaultNetMsgHandler<DemoProtocolTest.C2SAskReq, int>((_, connectionId, _) =>
             {
-                Console.WriteLine($"Received {nameof(DemoProtocolTest.C2SAskReq)} from {envelope.ConnectionId}");
-                return new ValueTask<NetResponse>(new NetResponse(nameof(DemoProtocolTest.C2SAskReq),
-                    JsonSerializer.SerializeToElement(100))
-                );
+                Console.WriteLine($"Received {nameof(DemoProtocolTest.C2SAskReq)} from {connectionId}");
+                return new ValueTask<int>(100);
             }));
         }
     }
