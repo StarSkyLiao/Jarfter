@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -22,6 +22,9 @@
       <ProjectReference Include="..\..\src\Jarfter.Net.Client\Jarfter.Net.Client.csproj" />
       <ProjectReference Include="..\..\src\Jarfter.Net.Protocol\Jarfter.Net.Protocol.csproj" />
       <ProjectReference Include="..\..\src\Jarfter.Net.Server\Jarfter.Net.Server.csproj" />
+      <ProjectReference Include="..\..\generators\Jarfter.Net.Protocol.Generator\Jarfter.Net.Protocol.Generator.csproj"
+                        OutputItemType="Analyzer"
+                        ReferenceOutputAssembly="false" />
     </ItemGroup>
 
 </Project>
