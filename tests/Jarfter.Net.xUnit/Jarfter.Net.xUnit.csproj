@@ -8,17 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-        <PackageReference Include="xunit.runner.visualstudio" />
-        <PackageReference Include="xunit.v3" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Using Include="Xunit"/>
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\..\src\Jarfter.Net.Client\Jarfter.Net.Client.csproj" />
       <ProjectReference Include="..\..\src\Jarfter.Net.Protocol\Jarfter.Net.Protocol.csproj" />
       <ProjectReference Include="..\..\src\Jarfter.Net.Server\Jarfter.Net.Server.csproj" />

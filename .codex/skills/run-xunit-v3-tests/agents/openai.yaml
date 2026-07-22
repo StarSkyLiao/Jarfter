@@ -1,0 +1,4 @@
+interface:
+  display_name: "运行 xUnit v3 测试"
+  short_description: "运行 Jarfter 的 xUnit v3 测试与 Cobertura 覆盖率采集"
+  default_prompt: "使用 $run-xunit-v3-tests 运行并验证当前仓库的测试."

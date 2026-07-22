@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -22,6 +22,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarfter.Net.Protocol.Generator", "generators\Jarfter.Net.Protocol.Generator\Jarfter.Net.Protocol.Generator.csproj", "{17D549E9-BDA5-4BBE-B64D-0137C83E9EF6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "generators", "generators", "{50A7955C-A0C5-4D10-8489-271D81F5CDD6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarfter.Hexagonal", "src\Jarfter.Hexagonal\Jarfter.Hexagonal.csproj", "{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarfter.Hexagonal.xUnit", "tests\Jarfter.Hexagonal.xUnit\Jarfter.Hexagonal.xUnit.csproj", "{2CB092B1-096A-4A87-B696-A8017F614E4B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -117,6 +121,30 @@ Global
 		{17D549E9-BDA5-4BBE-B64D-0137C83E9EF6}.Release|x64.Build.0 = Release|Any CPU
 		{17D549E9-BDA5-4BBE-B64D-0137C83E9EF6}.Release|x86.ActiveCfg = Release|Any CPU
 		{17D549E9-BDA5-4BBE-B64D-0137C83E9EF6}.Release|x86.Build.0 = Release|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Debug|x64.Build.0 = Debug|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Debug|x86.Build.0 = Debug|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Release|x64.ActiveCfg = Release|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Release|x64.Build.0 = Release|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Release|x86.ActiveCfg = Release|Any CPU
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944}.Release|x86.Build.0 = Release|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Debug|x64.Build.0 = Debug|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Debug|x86.Build.0 = Debug|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Release|x64.ActiveCfg = Release|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Release|x64.Build.0 = Release|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Release|x86.ActiveCfg = Release|Any CPU
+		{2CB092B1-096A-4A87-B696-A8017F614E4B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -129,5 +157,7 @@ Global
 		{370042E5-9A26-4A6C-9ED9-D1A1B1B6DBA2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{76F45C78-D1C8-4896-972F-AD38A5528347} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{17D549E9-BDA5-4BBE-B64D-0137C83E9EF6} = {50A7955C-A0C5-4D10-8489-271D81F5CDD6}
+		{0EFA90D5-4A45-4D03-A487-ABE5A4AC1944} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{2CB092B1-096A-4A87-B696-A8017F614E4B} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal
