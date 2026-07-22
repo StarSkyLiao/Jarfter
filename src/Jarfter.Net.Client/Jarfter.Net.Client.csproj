@@ -12,6 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Jarfter.Core\Jarfter.Core.csproj" />
       <ProjectReference Include="..\Jarfter.Net.Protocol\Jarfter.Net.Protocol.csproj" />
     </ItemGroup>
 

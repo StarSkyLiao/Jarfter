@@ -38,6 +38,7 @@ public partial class NetClient
     /// <param name="message">要提交的消息包.</param>
     /// <param name="cancelToken">用于取消异步调用的令牌.</param>
     /// <returns>服务端处理程序返回的结果.</returns>
+    [JetBrains.Annotations.MustUseReturnValueAttribute("协议具有没有使用的返回值, 请检查代码是否存在错误.")]
     public async ValueTask<T?> RequestAsync<T>(NetMessage message, CancellationToken cancelToken = default)
     {
         NetResponse response = await Connection.InvokeAsync<NetResponse>(HubMethods.SendMsg, message, cancelToken);
@@ -52,6 +53,7 @@ public partial class NetClient
     /// <param name="message">要提交的消息包.</param>
     /// <param name="cancelToken">用于取消异步调用的令牌.</param>
     /// <returns>服务端处理程序返回的结果.</returns>
+    [JetBrains.Annotations.MustUseReturnValueAttribute("协议具有没有使用的返回值, 请检查代码是否存在错误.")]
     public async ValueTask<TOut?> RequestAsync<TMessage, TOut>(INetRequest<TMessage, TOut> message, CancellationToken cancelToken = default)
         where TMessage : INetRequest<TMessage, TOut>
     {
@@ -62,4 +64,5 @@ public partial class NetClient
         NetResponse response = await Connection.InvokeAsync<NetResponse>(HubMethods.SendMsg, netMessage, cancelToken);
         return response.Payload.Deserialize<TOut>();
     }
+
 }
