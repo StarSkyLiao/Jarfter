@@ -1,7 +1,7 @@
+using Jarfter.Net.Protocol.Message;
 using Jarfter.Net.Protocol.SignalR;
-using Jarfter.Net.Server.Connection;
-using Jarfter.Net.Server.Message.Context;
-using Jarfter.Net.Server.Message.Patcher;
+using Jarfter.Net.Server.Message;
+using Jarfter.Net.Server.Service;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Jarfter.Net.Server.SignalR;
@@ -11,16 +11,18 @@ namespace Jarfter.Net.Server.SignalR;
 /// </summary>
 /// <param name="clientManager">服务端连接注册表.</param>
 /// <param name="dispatcher">服务端消息分发器.</param>
-public sealed class NetworkHub(IClientManager clientManager, INetMsgDispatcher dispatcher) : Hub
+public sealed class NetworkHub(IClientManager clientManager, INetMsgDispatcher dispatcher, IBroadcaster broadcaster) : Hub
 {
     /// <summary>
     /// 记录客户端连接建立.
     /// </summary>
     /// <returns>表示异步连接过程的任务.</returns>
-    public override Task OnConnectedAsync()
+    public override async Task OnConnectedAsync()
     {
-        clientManager.Connect(Context.ConnectionId, Context.UserIdentifier);
-        return base.OnConnectedAsync();
+        CancellationToken cancellationToken = Context.ConnectionAborted;
+        string connectionId = Context.ConnectionId;
+        clientManager.Connect(connectionId, Context.UserIdentifier);
+        await broadcaster.BroadcastAsync(new InternalMessage.ClientJoinedNtf(connectionId), cancellationToken);
     }
 
     /// <summary>
@@ -28,10 +30,12 @@ public sealed class NetworkHub(IClientManager clientManager, INetMsgDispatcher d
     /// </summary>
     /// <param name="exception">导致连接断开的异常.</param>
     /// <returns>表示异步断开过程的任务.</returns>
-    public override Task OnDisconnectedAsync(Exception? exception)
+    public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        clientManager.Disconnect(Context.ConnectionId);
-        return base.OnDisconnectedAsync(exception);
+        CancellationToken cancellationToken = Context.ConnectionAborted;
+        string connectionId = Context.ConnectionId;
+        clientManager.Disconnect(connectionId);
+        await broadcaster.BroadcastAsync(new InternalMessage.ClientLeftNtf(connectionId), cancellationToken);
     }
 
     /// <summary>
@@ -45,9 +49,10 @@ public sealed class NetworkHub(IClientManager clientManager, INetMsgDispatcher d
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
 
         CancellationToken cancellationToken = Context.ConnectionAborted;
-        await Groups.AddToGroupAsync(Context.ConnectionId, roomId, cancellationToken);
-        clientManager.JoinRoom(Context.ConnectionId, roomId);
-        await Clients.Group(roomId).SendAsync(HubMethods.ClientJoined, Context.ConnectionId, cancellationToken);
+        string connectionId = Context.ConnectionId;
+        await Groups.AddToGroupAsync(connectionId, roomId, cancellationToken);
+        clientManager.JoinRoom(connectionId, roomId);
+        await broadcaster.BroadcastToRoomAsync(roomId, new InternalMessage.JoinRoomNtf(connectionId), cancellationToken);
     }
 
     /// <summary>
@@ -61,9 +66,10 @@ public sealed class NetworkHub(IClientManager clientManager, INetMsgDispatcher d
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
 
         CancellationToken cancellationToken = Context.ConnectionAborted;
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId, cancellationToken);
-        clientManager.LeaveRoom(Context.ConnectionId, roomId);
-        await Clients.Group(roomId).SendAsync(HubMethods.ClientLeft, Context.ConnectionId, cancellationToken);
+        string connectionId = Context.ConnectionId;
+        await Groups.RemoveFromGroupAsync(connectionId, roomId, cancellationToken);
+        clientManager.LeaveRoom(connectionId, roomId);
+        await broadcaster.BroadcastToRoomAsync(roomId, new InternalMessage.LeaveRoomNtf(connectionId), cancellationToken);
     }
 
     /// <summary>

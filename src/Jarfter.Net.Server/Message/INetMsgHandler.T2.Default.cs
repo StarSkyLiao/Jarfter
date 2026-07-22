@@ -1,6 +1,6 @@
 using Jarfter.Net.Protocol.Message;
 
-namespace Jarfter.Net.Server.Message.Context;
+namespace Jarfter.Net.Server.Message;
 
 /// <summary>
 /// 提供一个默认的 INetMsgHandler 实现. 实际上你也可以为每一种协议单独写一个实现.

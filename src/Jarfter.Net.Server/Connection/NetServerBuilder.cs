@@ -1,7 +1,9 @@
 using Jarfter.Net.Server.Hosting;
+using Jarfter.Net.Server.Service;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Jarfter.Net.Server.Connection;
@@ -34,6 +36,9 @@ public class NetServerBuilder<TOption> where TOption : NetServerOptions
     {
         NetServerBuilder<TOption> netServerBuilder = new NetServerBuilder<TOption>(serverUrls);
         netServerBuilder.WebApplicationBuilder.WebHost.UseUrls(netServerBuilder.ServerUrls);
+        netServerBuilder.Services.TryAddSingleton<IBroadcaster, DefaultBroadcaster>();
+        netServerBuilder.Services.TryAddSingleton<IClientManager, DefaultClientManager>();
+        netServerBuilder.Services.TryAddSingleton<INetMsgDispatcher, DefaultNetMsgDispatcher>();
         netServerBuilder.Services.AddLogging(logging =>
         {
             logging.ClearProviders();

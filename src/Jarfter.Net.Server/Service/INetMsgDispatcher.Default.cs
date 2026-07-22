@@ -2,9 +2,9 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Jarfter.Net.Protocol.Message;
 using Jarfter.Net.Protocol.SignalR;
-using Jarfter.Net.Server.Message.Context;
+using Jarfter.Net.Server.Message;
 
-namespace Jarfter.Net.Server.Message.Patcher;
+namespace Jarfter.Net.Server.Service;
 
 /// <summary>
 /// 服务端按消息类型分发客户端消息的调度器.

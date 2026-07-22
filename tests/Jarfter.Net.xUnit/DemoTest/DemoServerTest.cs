@@ -1,11 +1,10 @@
 ﻿using Jarfter.Net.Server.Connection;
 using Jarfter.Net.Server.Hosting;
-using Jarfter.Net.Server.Message.Context;
-using Jarfter.Net.Server.Message.Patcher;
+using Jarfter.Net.Server.Message;
+using Jarfter.Net.Server.Service;
 using Jarfter.Net.Server.SignalR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace Jarfter.Net.xUnit.DemoTest;
@@ -25,10 +24,7 @@ internal static class DemoServerTest
     {
         NetServerBuilder<DemoProtocolTest.DemoOption> builder = NetServerBuilder<DemoProtocolTest.DemoOption>.CreateDefault(DemoProtocolTest.ServerUrl);
         builder.ConfigureNetServerOptions(static options => options.HubPath = DemoProtocolTest.HubRoutes);
-        builder.Services.TryAddSingleton<IClientManager, DefaultClientManager>();
-        builder.Services.TryAddSingleton<INetMsgDispatcher, DefaultNetMsgDispatcher>();
         WebApplication webApplication = builder.Build();
-
 
         NetServerOptions options = webApplication.Services.GetRequiredService<IOptions<DemoProtocolTest.DemoOption>>().Value;
         webApplication.MapHub<NetworkHub>(options.HubPath);

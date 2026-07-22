@@ -11,11 +11,6 @@ public static class HubMethods
     public const string SendMsg = nameof(SendMsg);
 
     /// <summary>
-    /// 获取客户端向服务端请求数据的方法名.
-    /// </summary>
-    public const string ClientReq = nameof(ClientReq);
-
-    /// <summary>
     /// 获取客户端调用服务端加入房间的方法名.
     /// </summary>
     public const string JoinRoom = nameof(JoinRoom);
@@ -25,13 +20,4 @@ public static class HubMethods
     /// </summary>
     public const string LeaveRoom = nameof(LeaveRoom);
 
-    /// <summary>
-    /// 获取服务端通知客户端有玩家加入房间的客户端方法名.
-    /// </summary>
-    public const string ClientJoined = nameof(ClientJoined);
-
-    /// <summary>
-    /// 获取服务端通知客户端有玩家离开房间的客户端方法名.
-    /// </summary>
-    public const string ClientLeft = nameof(ClientLeft);
 }

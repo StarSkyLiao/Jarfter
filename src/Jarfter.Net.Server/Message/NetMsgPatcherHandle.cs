@@ -1,4 +1,4 @@
-namespace Jarfter.Net.Server.Message.Patcher;
+namespace Jarfter.Net.Server.Message;
 
 /// <summary>
 /// 表示服务端消息处理程序注册后返回的补丁句柄.

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
+using Jarfter.Net.Server.Connection;
 
-namespace Jarfter.Net.Server.Connection;
+namespace Jarfter.Net.Server.Service;
 
 /// <summary>
 /// 用来记录服务器当前的所有客户端连接状态.

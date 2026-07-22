@@ -1,4 +1,5 @@
 ﻿using Jarfter.Net.Client.Connection;
+using Jarfter.Net.Protocol.Message;
 
 namespace Jarfter.Net.xUnit.DemoTest;
 
@@ -16,8 +17,11 @@ internal static class DemoClientATest
     public static async Task<NetClient> InitClient()
     {
         NetClient player = new NetClient(new Uri(DemoProtocolTest.ServerFullUrl));
-        player.On<DemoProtocolTest.SimpleMsg>(nameof(DemoProtocolTest.SimpleMsg), msg =>
+        player.On<DemoProtocolTest.SimpleMsg>(msg =>
             Console.WriteLine($"Player {player.Connection.ConnectionId} received {nameof(DemoProtocolTest.SimpleMsg)}: {msg.Text}")
+        );
+        player.On<InternalMessage.ClientJoinedNtf>(msg =>
+            Console.WriteLine($"Player {msg.ConnectionId} joined!")
         );
         await player.StartAsync();
         return player;

@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using Jarfter.Net.Server.Collections;
+using Jarfter.Net.Server.Connection;
 
-namespace Jarfter.Net.Server.Connection;
+namespace Jarfter.Net.Server.Service;
 
 /// <summary>
 /// 默认的用来记录服务器当前的所有客户端连接状态的对象.

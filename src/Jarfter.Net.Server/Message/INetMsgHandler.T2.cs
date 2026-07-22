@@ -2,18 +2,18 @@ using System.Text.Json;
 using Jarfter.Net.Protocol.Message;
 using Jarfter.Net.Protocol.SignalR;
 
-namespace Jarfter.Net.Server.Message.Context;
+namespace Jarfter.Net.Server.Message;
 
 
 /// <summary>
-/// 定义处理 <see cref="t:Jarfter.Net.Protocol.Message.INetRequest`2"/> 的接口.
+/// 定义处理 <see cref="T:Jarfter.Net.Protocol.Message.INetRequest`2"/> 的接口.
 /// </summary>
 /// <typeparam name="TMessage">协议类型.</typeparam>
 /// <typeparam name="TResponse">期望的返回值类型.</typeparam>
 public interface INetMsgHandler<in TMessage, TResponse> : INetMsgHandler where TMessage : INetRequest<TMessage, TResponse>
 {
     /// <summary>
-    /// 异步处理指定的 <see cref="t:Jarfter.Net.Server.Message.Context.NetMsgEnvelope"/>.
+    /// 异步处理指定的 <see cref="t:NetMsgEnvelope"/>.
     /// </summary>
     public ValueTask<TResponse> HandleAsync(TMessage message, string connectionId, CancellationToken cancellationToken);
 
