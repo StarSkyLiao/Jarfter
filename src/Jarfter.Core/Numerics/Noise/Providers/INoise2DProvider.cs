@@ -39,6 +39,20 @@ public interface INoise2DProvider
         // 计算权重
         double weightX = position.x - floorX;
         double weightY = position.y - floorY;
+
+        // 整数浮点坐标不需要读取相邻点, 以便有限区域提供器能够正确采样边界.
+        if (weightX == 0 && weightY == 0) return ValueAt((floorX, floorY));
+
+        // 某一轴恰好落在整数坐标时, 仅采样该轴上实际参与插值的两个点.
+        if (weightX == 0)
+        {
+            return Lerp(ValueAt((floorX, floorY)), ValueAt((floorX, floorY + 1)), weightY);
+        }
+        if (weightY == 0)
+        {
+            return Lerp(ValueAt((floorX, floorY)), ValueAt((floorX + 1, floorY)), weightX);
+        }
+
         // 包裹矩形下边对应点
         double bottomCenter = Lerp(
             ValueAt((floorX, floorY)),

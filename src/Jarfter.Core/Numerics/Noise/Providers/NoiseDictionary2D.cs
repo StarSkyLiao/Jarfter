@@ -6,6 +6,7 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 /// <summary>
 /// 噪声地图, 包含了一张无限大小的原始噪声地图.
 /// 所有新加入的点都会通过 Dictionary 来缓存下来.
+/// 缓存会随采样坐标持续增长, 且此类型不保证线程安全.
 /// </summary>
 /// <param name="seed">噪声图的种子.</param>
 /// <param name="calculator">未缓存点使用的噪声计算器.</param>

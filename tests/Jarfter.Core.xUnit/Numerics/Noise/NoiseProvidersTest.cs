@@ -150,6 +150,22 @@ public sealed class NoiseProvidersTest
         Assert.Equal(25.5, value);
     }
 
+    [Fact]
+    public void INoise2DProvider_WhenIntegerFloatingCoordinateRequestedFromChunk_ShouldSampleLatticePoint()
+    {
+        INoise2DProvider noise = new NoiseChunk2D(2026, (1, 1), calculator: new FixedNoiseCalculator(0.25));
+
+        Assert.Equal(0.25, noise.ValueAt((0d, 0d)));
+    }
+
+    [Fact]
+    public void INoise2DProvider_WhenOneAxisIsIntegerAtChunkBoundary_ShouldOnlySampleRequiredPoints()
+    {
+        INoise2DProvider noise = new NoiseChunk2D(2026, (2, 2), calculator: new CountingNoiseCalculator());
+
+        Assert.Equal(100.5, noise.ValueAt((1d, 0.5d)));
+    }
+
     private sealed class CountingNoiseCalculator : INoiseCalculator
     {
         public int CallCount { get; private set; }

@@ -7,6 +7,7 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 /// 噪声地图, 包含了一张有限大小的原始噪声地图.
 /// 所有新加入的点都会通过 Array 来缓存下来.
 /// 访问超出范围的坐标时会引发异常.
+/// 此类型会写入内部缓存, 不保证线程安全.
 /// </summary>
 /// <param name="seed">噪声图的种子.</param>
 /// <param name="size">噪声图的宽度和高度.</param>

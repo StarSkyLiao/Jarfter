@@ -8,6 +8,7 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 /// 所有新加入的点都会通过一个 Dictionary ,
 /// 映射到一个<see cref="NoiseChunk2D"/>区块中,
 /// 通过在区块中缓存噪声结果以降低 Dictionary 的负载.
+/// 缓存会随采样区块持续增长, 且此类型不保证线程安全.
 /// </summary>
 /// <param name="seed">噪声图的种子.</param>
 /// <param name="calculator">未缓存点使用的噪声计算器.</param>
