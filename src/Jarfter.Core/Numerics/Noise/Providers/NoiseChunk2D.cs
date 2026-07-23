@@ -6,7 +6,7 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 /// <summary>
 /// 噪声地图, 包含了一张有限大小的原始噪声地图.
 /// 所有新加入的点都会通过 Array 来缓存下来.
-/// 当访问超出了范围的点时，将会返回 -1 .
+/// 访问超出范围的坐标时会引发异常.
 /// </summary>
 /// <param name="seed">噪声图的种子.</param>
 /// <param name="size">噪声图的宽度和高度.</param>
@@ -15,7 +15,8 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 public class NoiseChunk2D(int seed, Point size, Point start = default, INoiseCalculator? calculator = null)
     : INoise2DProvider
 {
-    private readonly double[] m_NoiseMap = InitArray(size.x * size.y);
+    private readonly double[] m_NoiseMap = new double[size.x * size.y];
+    private readonly bool[] m_IsCached = new bool[size.x * size.y];
 
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
@@ -24,26 +25,21 @@ public class NoiseChunk2D(int seed, Point size, Point start = default, INoiseCal
     public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="localPosition"/> 超出区块范围时引发.</exception>
     public double ValueAt(Point localPosition)
     {
-        if (localPosition.x < 0 || localPosition.x >= size.x) return -1;
-        if (localPosition.y < 0 || localPosition.y >= size.y) return -1;
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual((uint)localPosition.x, (uint)size.x);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual((uint)localPosition.y, (uint)size.y);
+
         // 数组按 X 轴分组、Y 轴连续存储, 因此每组的步长必须是高度.
         int index = localPosition.x * size.y + localPosition.y;
-        double cached = m_NoiseMap[index];
-        if (cached >= 0) return cached;
-        cached = Calculator.Calculate(NoiseSeed,
+        if (m_IsCached[index]) return m_NoiseMap[index];
+
+        double cached = Calculator.Calculate(NoiseSeed,
             (localPosition.x + start.x, localPosition.y + start.y)
         );
         m_NoiseMap[index] = cached;
+        m_IsCached[index] = true;
         return cached;
     }
-
-    private static double[] InitArray(int size)
-    {
-        double[] noiseMap = new double[size];
-        Array.Fill(noiseMap, -1);
-        return noiseMap;
-    }
-
 }

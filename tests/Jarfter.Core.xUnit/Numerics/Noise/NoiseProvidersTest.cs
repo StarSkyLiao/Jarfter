@@ -59,6 +59,26 @@ public sealed class NoiseProvidersTest
     }
 
     [Fact]
+    public void NoiseChunk2D_WhenCoordinateIsOutsideChunk_ShouldThrowArgumentOutOfRangeException()
+    {
+        NoiseChunk2D noise = new(2026, (2, 3));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => noise.ValueAt((2, 0)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => noise.ValueAt((0, -1)));
+    }
+
+    [Fact]
+    public void NoiseChunk2D_WhenCalculatorReturnsNegativeValue_ShouldCacheValue()
+    {
+        FixedNoiseCalculator calculator = new(-0.25);
+        NoiseChunk2D noise = new(2026, (1, 1), calculator: calculator);
+
+        Assert.Equal(-0.25, noise.ValueAt((0, 0)));
+        Assert.Equal(-0.25, noise.ValueAt((0, 0)));
+        Assert.Equal(1, calculator.CallCount);
+    }
+
+    [Fact]
     public void NoiseTree2D_WhenNegativeCoordinateRequested_ShouldUseDistinctCoordinateCacheEntry()
     {
         CountingNoiseCalculator calculator = new();
@@ -70,6 +90,17 @@ public sealed class NoiseProvidersTest
         Assert.Equal(0, origin);
         Assert.Equal(-100, negative);
         Assert.Equal(2, calculator.CallCount);
+    }
+
+    [Fact]
+    public void NoiseTree2D_WhenCalculatorReturnsNaN_ShouldCacheValue()
+    {
+        FixedNoiseCalculator calculator = new(double.NaN);
+        NoiseTree2D noise = new(2026, calculator);
+
+        Assert.True(double.IsNaN(noise.ValueAt((0, 0))));
+        Assert.True(double.IsNaN(noise.ValueAt((0, 0))));
+        Assert.Equal(1, calculator.CallCount);
     }
 
     [Fact]
@@ -90,6 +121,17 @@ public sealed class NoiseProvidersTest
         {
             CallCount++;
             return point.x * 100 + point.y;
+        }
+    }
+
+    private sealed class FixedNoiseCalculator(double value) : INoiseCalculator
+    {
+        public int CallCount { get; private set; }
+
+        public double Calculate(int localSeed, (int x, int y) point)
+        {
+            CallCount++;
+            return value;
         }
     }
 

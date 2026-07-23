@@ -1,9 +1,3 @@
-//------------------------------------------------------------
-// MiHoMiao
-// Written by Mingxuan Liao.
-// [Version] 1.0
-//------------------------------------------------------------
-
 using Jarfter.Core.Numerics.Noise.Calculators;
 using Point = (int x, int y);
 

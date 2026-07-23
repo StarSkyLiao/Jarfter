@@ -1,12 +1,6 @@
-//------------------------------------------------------------
-// MiHoMiao
-// Written by Mingxuan Liao.
-// [Version] 1.0
-//------------------------------------------------------------
-
 using Jarfter.Core.Numerics.Noise.Calculators;
 using Point = (int x, int y);
-using Chunk = (Jarfter.Core.Numerics.Noise.Providers.NoiseTree2D? node, double value);
+using Chunk = (Jarfter.Core.Numerics.Noise.Providers.NoiseTree2D? node, double value, bool isValueCached);
 
 namespace Jarfter.Core.Numerics.Noise.Providers;
 
@@ -23,7 +17,7 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
     private const long Mask = ChunkSize * ChunkSize - 1;
     private static readonly int s_Offset = (int)Math.Round(Math.Log2(ChunkSize)) * 2;
 
-    private readonly Chunk[] m_NoiseMap = InitArray(ChunkSize * ChunkSize);
+    private readonly Chunk[] m_NoiseMap = new Chunk[ChunkSize * ChunkSize];
 
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
@@ -62,17 +56,11 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
             node ??= new NoiseTree2D(NoiseSeed, Calculator);
             return node.ValueAtInternal(index >> s_Offset, position);
         }
-        ref double cached = ref m_NoiseMap[index].value;
-        if (cached >= 0) return cached;
-        cached = Calculator.Calculate(NoiseSeed, position);
-        return cached;
-    }
+        ref Chunk cached = ref m_NoiseMap[index];
+        if (cached.isValueCached) return cached.value;
 
-    private static Chunk[] InitArray(int size)
-    {
-        Chunk[] noiseMap = new Chunk[size];
-        Array.Fill(noiseMap, (null, -1));
-        return noiseMap;
+        cached.value = Calculator.Calculate(NoiseSeed, position);
+        cached.isValueCached = true;
+        return cached.value;
     }
-
 }
