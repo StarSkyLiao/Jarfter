@@ -6,11 +6,43 @@ using Jarfter.Hexagonal.Pathfinding.Navigation;
 namespace Jarfter.Hexagonal.Pathfinding.Search;
 
 /// <summary>
-/// 提供以任意连续世界坐标作为起终点的六边形 Theta* 寻路.
-/// 在直接可见时返回单段路径; 否则通过附近可见格心锚点接入离散 Theta* 搜索.
+/// 提供以任意连续世界坐标作为起终点的六边形路径查找.
+/// 在直接可见时返回单段路径; 否则通过附近可见格心锚点接入已装配的格心路径查找器.
 /// </summary>
-public static class HexWorldThetaStar
+public sealed class HexWorldPathfinder : IHexWorldPathfinder
 {
+    /// <summary>
+    /// 初始化 <see cref="HexWorldPathfinder"/> 的新实例.
+    /// </summary>
+    /// <param name="gridPathfinder">负责格心锚点之间搜索的路径查找器.</param>
+    /// <param name="options">连续端点接入格心搜索的选项; 为 <see langword="null"/> 时使用默认选项.</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="gridPathfinder"/> 为 <see langword="null"/> 时抛出.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">当锚点搜索半径小于一时抛出.</exception>
+    public HexWorldPathfinder(IHexGridPathfinder gridPathfinder, HexWorldPathfinderOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(gridPathfinder);
+
+        options ??= new HexWorldPathfinderOptions();
+
+        if (options.AnchorSearchRadius < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), options.AnchorSearchRadius, "锚点搜索半径必须至少为一.");
+        }
+
+        GridPathfinder = gridPathfinder;
+        Options = options;
+    }
+
+    /// <summary>
+    /// 获取负责格心锚点之间搜索的路径查找器.
+    /// </summary>
+    public IHexGridPathfinder GridPathfinder { get; }
+
+    /// <summary>
+    /// 获取此实例使用的连续端点接入选项.
+    /// </summary>
+    public HexWorldPathfinderOptions Options { get; }
+
     /// <summary>
     /// 在指定不可变导航快照中尝试查找从连续起点到连续终点的低成本可见路径.
     /// 返回路径的首尾航点分别等于传入的 <paramref name="start"/> 和 <paramref name="goal"/>.
@@ -22,10 +54,10 @@ public static class HexWorldThetaStar
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="path">查找成功时得到的连续世界坐标路径.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
-    /// <returns>当起终点可通行且存在可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    /// <returns>当起终点可通行且已装配的查找器返回可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或坐标无效时抛出.</exception>
-    public static bool TryFindPath(
+    public bool TryFindPath(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
         HexagonalWorldPoint start,
@@ -66,7 +98,7 @@ public static class HexWorldThetaStar
                 clearanceApothemScale,
                 out HexagonalCubePoint goalAnchor,
                 out double goalAnchorCost)
-            || !HexGridThetaStar.TryFindPath(
+            || !GridPathfinder.TryFindPath(
                 snapshot,
                 layout,
                 startAnchor,
@@ -91,7 +123,7 @@ public static class HexWorldThetaStar
         return true;
     }
 
-    private static bool TryGetAnchor(
+    private bool TryGetAnchor(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
         HexagonalWorldPoint position,
@@ -119,8 +151,8 @@ public static class HexWorldThetaStar
         double bestCost = double.PositiveInfinity;
         HexagonalCubePoint bestAnchor = default;
 
-        // 仅枚举最近格及其六个邻居, 既能绕过部分格心障碍, 又保持固定的小常数开销.
-        foreach (HexagonalCubePoint candidate in nearest.RangeIn(1))
+        // 枚举配置范围内的候选格心, 在局部阻塞时为连续端点选择可见锚点.
+        foreach (HexagonalCubePoint candidate in nearest.RangeIn(Options.AnchorSearchRadius))
         {
             if (!snapshot.TryGetCell(candidate, out HexNavigationCell cell) || cell.HasObstacle)
             {

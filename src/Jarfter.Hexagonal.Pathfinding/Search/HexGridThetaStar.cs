@@ -9,8 +9,17 @@ namespace Jarfter.Hexagonal.Pathfinding.Search;
 /// 提供以六边形格心为搜索节点的 Theta* 寻路.
 /// 算法通过父节点的直接视线连接减少不必要的中间航点, 并使用实际穿格长度累计地形成本.
 /// </summary>
-public static class HexGridThetaStar
+public sealed class HexGridThetaStar : IHexGridPathfinder
 {
+    /// <summary>
+    /// 获取内置 Theta* 格心寻路器的无状态单例实例.
+    /// </summary>
+    public static HexGridThetaStar Instance { get; } = new HexGridThetaStar();
+
+    private HexGridThetaStar()
+    {
+    }
+
     /// <summary>
     /// 在指定不可变导航快照中尝试查找从起点格心到终点格心的低成本可见路径.
     /// 起点和终点必须是无格心障碍的地图格子, 返回路径中的相邻节点均具有可通行视线.
@@ -25,7 +34,7 @@ public static class HexGridThetaStar
     /// <returns>当起终点均可作为节点且存在可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或快照最小地形倍率无效时抛出.</exception>
-    public static bool TryFindPath(
+    public bool TryFindPath(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
         HexagonalCubePoint start,

@@ -16,7 +16,11 @@ public sealed class GridThetaStarTests
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
         HexagonalCubePoint goal = new HexagonalCubePoint(2, 1);
 
-        bool found = HexGridThetaStar.TryFindPath(
+        IHexGridPathfinder pathfinder = HexGridThetaStar.Instance;
+
+        Assert.Same(HexGridThetaStar.Instance, pathfinder);
+
+        bool found = pathfinder.TryFindPath(
             snapshot,
             layout,
             HexagonalCubePoint.Zero,
@@ -48,7 +52,7 @@ public sealed class GridThetaStarTests
         HexagonalFootprint footprint = new HexagonalFootprint(0.25);
         HexagonalCubePoint goal = new HexagonalCubePoint(3, 0);
 
-        bool found = HexGridThetaStar.TryFindPath(
+        bool found = HexGridThetaStar.Instance.TryFindPath(
             snapshot,
             layout,
             HexagonalCubePoint.Zero,
@@ -79,7 +83,7 @@ public sealed class GridThetaStarTests
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridThetaStar.TryFindPath(
+        bool found = HexGridThetaStar.Instance.TryFindPath(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.FlatTop, 1),
             HexagonalCubePoint.Zero,
