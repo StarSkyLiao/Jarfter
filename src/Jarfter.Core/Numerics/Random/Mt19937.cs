@@ -4,7 +4,7 @@ namespace Jarfter.Core.Numerics.Random;
 /// 实现 64 位 Mersenne Twister 伪随机数生成器.
 /// <para>该类型不保证线程安全. 未显式设定种子时, 首次生成随机数会使用默认种子 5489.</para>
 /// </summary>
-public sealed class MT19937
+public sealed class Mt19937 : IRandomSource
 {
     private const int StateSize = 312;
     private const int MiddleWordOffset = 156;
@@ -25,6 +25,7 @@ public sealed class MT19937
     /// <param name="seed">用于初始化状态的种子.</param>
     public void Seed(ulong seed)
     {
+        ArgumentOutOfRangeException.ThrowIfZero(seed);
         m_State[0] = seed;
         for (m_Index = 1; m_Index < StateSize; m_Index++)
             m_State[m_Index] = 6364136223846793005 * (m_State[m_Index - 1] ^ (m_State[m_Index - 1] >> 62)) + m_Index;
@@ -99,6 +100,44 @@ public sealed class MT19937
         value ^= value >> 43;
         return value;
     }
+
+    /// <inheritdoc />
+    public int NextInt32(int minInclusive, int maxExclusive)
+    {
+        if (minInclusive >= maxExclusive)
+            throw new ArgumentOutOfRangeException(nameof(maxExclusive), "上限必须大于下限.");
+
+        ulong range = (ulong)((long)maxExclusive - minInclusive);
+        ulong threshold = unchecked(0UL - range) % range;
+        ulong value;
+
+        do value = UInt64();
+        while (value < threshold);
+
+        return (int)(minInclusive + (long)(value % range));
+    }
+
+    /// <inheritdoc />
+    public long NextInt64(long minInclusive, long maxExclusive)
+    {
+        if (minInclusive >= maxExclusive)
+            throw new ArgumentOutOfRangeException(nameof(maxExclusive), "上限必须大于下限.");
+
+        ulong range = unchecked((ulong)(maxExclusive - minInclusive));
+        ulong threshold = unchecked(0UL - range) % range;
+        ulong value;
+
+        do value = UInt64();
+        while (value < threshold);
+
+        return unchecked((long)((ulong)minInclusive + value % range));
+    }
+
+    /// <inheritdoc />
+    public float NextSingle() => (UInt64() >> 40) * (1f / (1 << 24));
+
+    /// <inheritdoc />
+    public double NextDouble() => (UInt64() >> 11) * (1d / (1L << 53));
 
     /// <summary>
     /// 获取下一个非负的 63 位随机整数.

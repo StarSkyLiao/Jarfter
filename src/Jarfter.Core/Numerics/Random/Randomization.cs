@@ -196,6 +196,24 @@ public static class Randomization
     }
 
     /// <summary>
+    /// 从只读列表中随机选取一个元素.
+    /// </summary>
+    /// <param name="self">要选取元素的只读列表.</param>
+    /// <returns>随机选取的元素; 当列表为空时返回默认值.</returns>
+    public static T? Select<T>(this IReadOnlyList<T> self)
+    {
+        ArgumentNullException.ThrowIfNull(self);
+        return self.Count == 0 ? default : self[s_Random.Next(self.Count)];
+    }
+
+    /// <summary>
+    /// 从只读跨度中随机选取一个元素.
+    /// </summary>
+    /// <param name="self">要选取元素的只读跨度.</param>
+    /// <returns>随机选取的元素; 当跨度为空时返回默认值.</returns>
+    public static T? Select<T>(this ReadOnlySpan<T> self) => self.IsEmpty ? default : self[s_Random.Next(self.Length)];
+
+    /// <summary>
     /// 从序列中随机选取一个元素.
     /// </summary>
     /// <param name="enumerable">要选取元素的序列.</param>
@@ -203,8 +221,37 @@ public static class Randomization
     public static T? Select<T>(IEnumerable<T> enumerable)
     {
         ArgumentNullException.ThrowIfNull(enumerable);
-        T[] entries = enumerable as T[] ?? [.. enumerable];
-        return entries.Length == 0 ? default : entries[s_Random.Next(entries.Length)];
+        if (enumerable is IReadOnlyList<T> entries) return entries.Select();
+
+        T[] array = enumerable as T[] ?? [.. enumerable];
+        return array.Length == 0 ? default : array[s_Random.Next(array.Length)];
+    }
+
+    /// <summary>
+    /// 使用指定随机源从只读列表中随机选取一个元素.
+    /// </summary>
+    /// <param name="self">要使用的随机数来源.</param>
+    /// <param name="entries">要选取元素的只读列表.</param>
+    /// <returns>随机选取的元素; 当列表为空时返回默认值.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="self"/> 或 <paramref name="entries"/> 为 <see langword="null"/>.</exception>
+    public static T? Select<T>(this IRandomSource self, IReadOnlyList<T> entries)
+    {
+        ArgumentNullException.ThrowIfNull(self);
+        ArgumentNullException.ThrowIfNull(entries);
+        return entries.Count == 0 ? default : entries[self.NextInt32(0, entries.Count)];
+    }
+
+    /// <summary>
+    /// 使用指定随机源从只读跨度中随机选取一个元素.
+    /// </summary>
+    /// <param name="self">要使用的随机数来源.</param>
+    /// <param name="entries">要选取元素的只读跨度.</param>
+    /// <returns>随机选取的元素; 当跨度为空时返回默认值.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="self"/> 为 <see langword="null"/>.</exception>
+    public static T? Select<T>(this IRandomSource self, ReadOnlySpan<T> entries)
+    {
+        ArgumentNullException.ThrowIfNull(self);
+        return entries.IsEmpty ? default : entries[self.NextInt32(0, entries.Length)];
     }
 
     /// <summary>
@@ -217,8 +264,37 @@ public static class Randomization
     {
         ArgumentNullException.ThrowIfNull(self);
         ArgumentNullException.ThrowIfNull(enumerable);
-        T[] entries = enumerable as T[] ?? [.. enumerable];
-        return entries.Length == 0 ? default : entries[self.Range(0, entries.Length)];
+        if (enumerable is IReadOnlyList<T> entries) return self.Select(entries);
+
+        T[] array = enumerable as T[] ?? [.. enumerable];
+        return array.Length == 0 ? default : array[self.Range(0, array.Length)];
+    }
+
+    /// <summary>
+    /// 使用指定生成器从只读列表中随机选取一个元素.
+    /// </summary>
+    /// <param name="self">要使用的随机数生成器.</param>
+    /// <param name="entries">要选取元素的只读列表.</param>
+    /// <returns>随机选取的元素; 当列表为空时返回默认值.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="self"/> 或 <paramref name="entries"/> 为 <see langword="null"/>.</exception>
+    public static T? Select<T>(this System.Random self, IReadOnlyList<T> entries)
+    {
+        ArgumentNullException.ThrowIfNull(self);
+        ArgumentNullException.ThrowIfNull(entries);
+        return entries.Count == 0 ? default : entries[self.Next(entries.Count)];
+    }
+
+    /// <summary>
+    /// 使用指定生成器从只读跨度中随机选取一个元素.
+    /// </summary>
+    /// <param name="self">要使用的随机数生成器.</param>
+    /// <param name="entries">要选取元素的只读跨度.</param>
+    /// <returns>随机选取的元素; 当跨度为空时返回默认值.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="self"/> 为 <see langword="null"/>.</exception>
+    public static T? Select<T>(this System.Random self, ReadOnlySpan<T> entries)
+    {
+        ArgumentNullException.ThrowIfNull(self);
+        return entries.IsEmpty ? default : entries[self.Next(entries.Length)];
     }
 
     /// <summary>
@@ -230,6 +306,23 @@ public static class Randomization
         for (int index = self.Length - 1; index > 0; index--)
         {
             int swapIndex = s_Random.Next(index + 1);
+            (self[index], self[swapIndex]) = (self[swapIndex], self[index]);
+        }
+    }
+
+    /// <summary>
+    /// 使用指定随机源原地随机打乱跨度中的元素.
+    /// </summary>
+    /// <param name="self">要打乱的元素跨度.</param>
+    /// <param name="randomSource">要使用的随机数来源.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="randomSource"/> 为 <see langword="null"/>.</exception>
+    public static void Shuffle<T>(this Span<T> self, IRandomSource randomSource)
+    {
+        ArgumentNullException.ThrowIfNull(randomSource);
+
+        for (int index = self.Length - 1; index > 0; index--)
+        {
+            int swapIndex = randomSource.NextInt32(0, index + 1);
             (self[index], self[swapIndex]) = (self[swapIndex], self[index]);
         }
     }

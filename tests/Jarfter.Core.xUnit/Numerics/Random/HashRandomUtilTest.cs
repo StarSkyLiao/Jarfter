@@ -41,17 +41,37 @@ public sealed class HashRandomUtilTest
     [Fact]
     public void HashRandom_WhenSameSeedProvided_ShouldGenerateSameBoundedSequence()
     {
-        HashRandom first = new(100);
-        HashRandom second = new(100);
+        IRandomSource first = new HashRandom(100);
+        IRandomSource second = new HashRandom(100);
 
         for (int index = 0; index < 100; index++)
         {
-            Assert.Equal(first.Int32(10, 20), second.Int32(10, 20));
+            Assert.Equal(first.NextInt32(10, 20), second.NextInt32(10, 20));
 
             int firstRange = first.Range(-5, 5);
             int secondRange = second.Range(-5, 5);
             Assert.Equal(firstRange, secondRange);
             Assert.InRange(firstRange, -5, 4);
         }
+    }
+
+    [Fact]
+    public void HashRandom_WhenResetAndForked_ShouldReplayAndIsolateSequences()
+    {
+        HashRandom random = new HashRandom(2026);
+        int initialState = random.State;
+        int firstValue = random.NextInt32(-100, 100);
+
+        random.Reset(initialState);
+
+        Assert.Equal(firstValue, random.NextInt32(-100, 100));
+
+        int stateBeforeFork = random.State;
+        HashRandom firstFork = random.Fork(42);
+        HashRandom secondFork = random.Fork(42);
+
+        Assert.Equal(stateBeforeFork, random.State);
+        for (int index = 0; index < 100; index++)
+            Assert.Equal(firstFork.NextInt64(long.MinValue, long.MaxValue), secondFork.NextInt64(long.MinValue, long.MaxValue));
     }
 }

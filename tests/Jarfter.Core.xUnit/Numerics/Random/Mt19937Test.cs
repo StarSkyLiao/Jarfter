@@ -2,12 +2,12 @@ using Jarfter.Core.Numerics.Random;
 
 namespace Jarfter.Core.xUnit.Numerics.Random;
 
-public sealed class MT19937Test
+public sealed class Mt19937Test
 {
     [Fact]
     public void UInt64_WhenDefaultSeedUsed_ShouldMatchReferenceSequence()
     {
-        MT19937 random = new();
+        Mt19937 random = new Mt19937();
 
         Assert.Equal(14_514_284_786_278_117_030UL, random.UInt64());
     }
@@ -15,8 +15,8 @@ public sealed class MT19937Test
     [Fact]
     public void UInt64_WhenSameSeedProvided_ShouldGenerateSameSequence()
     {
-        MT19937 first = new();
-        MT19937 second = new();
+        Mt19937 first = new Mt19937();
+        Mt19937 second = new Mt19937();
         first.Seed(12345);
         second.Seed(12345);
 
@@ -26,7 +26,7 @@ public sealed class MT19937Test
     [Fact]
     public void RealMethods_WhenGenerated_ShouldHonorDocumentedIntervals()
     {
-        MT19937 random = new();
+        Mt19937 random = new Mt19937();
         random.Seed(54321);
 
         for (int index = 0; index < 1_000; index++)
@@ -43,7 +43,7 @@ public sealed class MT19937Test
     [Fact]
     public void Seed_WhenKeyArrayIsEmpty_ShouldThrow()
     {
-        MT19937 random = new();
+        Mt19937 random = new Mt19937();
 
         Assert.Throws<ArgumentException>(() => random.Seed([]));
     }

@@ -34,8 +34,8 @@ public sealed class AliasPool<T>
     {
         ArgumentNullException.ThrowIfNull(newChanceTable);
 
-        Count = newChanceTable.Count;
-        if (m_ChanceTable.Length < Count) m_ChanceTable = new (T Item, double Weight)[Count];
+        int count = newChanceTable.Count;
+        (T Item, double Weight)[] chanceTable = new (T Item, double Weight)[count];
 
         int index = 0;
         double totalWeight = 0;
@@ -44,23 +44,27 @@ public sealed class AliasPool<T>
             if (!double.IsFinite(entry.weight) || entry.weight < 0)
                 throw new ArgumentOutOfRangeException(nameof(newChanceTable), "权重必须是有限的非负数.");
 
-            m_ChanceTable[index++] = (entry.item, entry.weight);
+            chanceTable[index++] = (entry.item, entry.weight);
             totalWeight += entry.weight;
         }
 
-        if (Count > 0 && (!double.IsFinite(totalWeight) || totalWeight <= 0))
+        if (count > 0 && (!double.IsFinite(totalWeight) || totalWeight <= 0))
             throw new ArgumentOutOfRangeException(nameof(newChanceTable), "非空权重表的权重总和必须为正数.");
 
-        m_Alias = new (double Probability, int Index)[Count];
-        if (Count == 0) return;
-
-        Queue<int> smaller = new(Count);
-        Queue<int> larger = new(Count);
-
-        for (int i = 0; i < Count; i++)
+        (double Probability, int Index)[] alias = new (double Probability, int Index)[count];
+        if (count == 0)
         {
-            m_ChanceTable[i].Weight = m_ChanceTable[i].Weight / totalWeight * Count;
-            if (m_ChanceTable[i].Weight < 1) smaller.Enqueue(i);
+            CommitUpdate(chanceTable, alias, count);
+            return;
+        }
+
+        Queue<int> smaller = new Queue<int>(count);
+        Queue<int> larger = new Queue<int>(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            chanceTable[i].Weight = chanceTable[i].Weight / totalWeight * count;
+            if (chanceTable[i].Weight < 1) smaller.Enqueue(i);
             else larger.Enqueue(i);
         }
 
@@ -69,15 +73,17 @@ public sealed class AliasPool<T>
         {
             int smallIndex = smaller.Dequeue();
             int largeIndex = larger.Dequeue();
-            m_Alias[smallIndex] = (m_ChanceTable[smallIndex].Weight, largeIndex);
-            m_ChanceTable[largeIndex].Weight = m_ChanceTable[smallIndex].Weight + m_ChanceTable[largeIndex].Weight - 1;
+            alias[smallIndex] = (chanceTable[smallIndex].Weight, largeIndex);
+            chanceTable[largeIndex].Weight = chanceTable[smallIndex].Weight + chanceTable[largeIndex].Weight - 1;
 
-            if (m_ChanceTable[largeIndex].Weight < 1) smaller.Enqueue(largeIndex);
+            if (chanceTable[largeIndex].Weight < 1) smaller.Enqueue(largeIndex);
             else larger.Enqueue(largeIndex);
         }
 
-        while (larger.Count > 0) m_Alias[larger.Dequeue()].Probability = 1;
-        while (smaller.Count > 0) m_Alias[smaller.Dequeue()].Probability = 1;
+        while (larger.Count > 0) alias[larger.Dequeue()].Probability = 1;
+        while (smaller.Count > 0) alias[smaller.Dequeue()].Probability = 1;
+
+        CommitUpdate(chanceTable, alias, count);
     }
 
     /// <summary>
@@ -90,6 +96,22 @@ public sealed class AliasPool<T>
         EnsureNotEmpty();
         int index = Randomization.Range(0, Count);
         return Randomization.Try(m_Alias[index].Probability) ? m_ChanceTable[index].Item : m_ChanceTable[m_Alias[index].Index].Item;
+    }
+
+    /// <summary>
+    /// 使用指定随机源按权重返回一个元素.
+    /// </summary>
+    /// <param name="randomSource">要使用的随机数来源.</param>
+    /// <returns>随机选取的元素.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="randomSource"/> 为 <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">当前权重表为空.</exception>
+    public T GetRandomly(IRandomSource randomSource)
+    {
+        ArgumentNullException.ThrowIfNull(randomSource);
+        EnsureNotEmpty();
+
+        int index = randomSource.NextInt32(0, Count);
+        return randomSource.NextDouble() < m_Alias[index].Probability ? m_ChanceTable[index].Item : m_ChanceTable[m_Alias[index].Index].Item;
     }
 
     /// <summary>
@@ -108,5 +130,12 @@ public sealed class AliasPool<T>
     private void EnsureNotEmpty()
     {
         if (Count == 0) throw new InvalidOperationException("不能从空的随机选取池中获取元素.");
+    }
+
+    private void CommitUpdate((T Item, double Weight)[] chanceTable, (double Probability, int Index)[] alias, int count)
+    {
+        m_ChanceTable = chanceTable;
+        m_Alias = alias;
+        Count = count;
     }
 }
