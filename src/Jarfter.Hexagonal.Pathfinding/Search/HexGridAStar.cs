@@ -20,6 +20,29 @@ public sealed class HexGridAStar : IHexGridPathfinder
     }
 
     /// <inheritdoc />
+    public HexGridPath? FindPath(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexagonalCubePoint start,
+        HexagonalCubePoint goal,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale = 0,
+        IHexTraversalCostPolicy? costPolicy = null,
+        HexPathfindingRequestOptions? requestOptions = null)
+    {
+        return HexGridSearch.FindPath(
+            HexGridSearchMode.AStar,
+            snapshot,
+            layout,
+            start,
+            goal,
+            footprint,
+            clearanceApothemScale,
+            costPolicy,
+            requestOptions);
+    }
+
+    /// <inheritdoc />
     public ValueTask<HexGridPath?> FindPathAsync(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,

@@ -69,11 +69,31 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
     /// <param name="goal">移动对象的连续世界坐标终点.</param>
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
-    /// <param name="requestOptions">本次格心搜索的节点、超时与取消限制; 为 <see langword="null"/> 时不限制.</param>
-    /// <returns>表示异步搜索操作的值任务. 成功时结果为连续世界坐标路径; 不可达、超时或超出节点预算时结果为 <see langword="null"/>.</returns>
+    /// <param name="requestOptions">本次格心搜索的节点、超时、取消与缓存策略; 为 <see langword="null"/> 时使用默认策略.</param>
+    /// <returns>成功时得到连续世界坐标路径; 不可达、超时或超出节点预算时返回 <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或坐标无效时抛出.</exception>
     /// <exception cref="OperationCanceledException">当 <paramref name="requestOptions"/> 中的取消令牌被取消时抛出.</exception>
+    public HexWorldPath? FindPath(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexagonalWorldPoint start,
+        HexagonalWorldPoint goal,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale = 0,
+        HexPathfindingRequestOptions? requestOptions = null)
+    {
+        return FindPathCore(
+            snapshot,
+            layout,
+            start,
+            goal,
+            footprint,
+            clearanceApothemScale,
+            requestOptions);
+    }
+
+    /// <inheritdoc />
     public ValueTask<HexWorldPath?> FindPathAsync(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
@@ -84,7 +104,7 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
         HexPathfindingRequestOptions? requestOptions = null)
     {
         return new ValueTask<HexWorldPath?>(Task.Run(
-            () => TryFindPathCoreAsync(
+            () => FindPathCore(
                 snapshot,
                 layout,
                 start,
@@ -95,7 +115,7 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
             requestOptions?.CancellationToken ?? CancellationToken.None));
     }
 
-    private async Task<HexWorldPath?> TryFindPathCoreAsync(
+    private HexWorldPath? FindPathCore(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
         HexagonalWorldPoint start,
@@ -144,7 +164,7 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
             return null;
         }
 
-        HexGridPath? gridPath = await GridPathfinder.FindPathAsync(
+        HexGridPath? gridPath = GridPathfinder.FindPath(
             snapshot,
             layout,
             startAnchor,

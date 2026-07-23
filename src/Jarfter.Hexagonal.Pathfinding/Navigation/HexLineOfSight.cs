@@ -69,6 +69,42 @@ public static class HexLineOfSight
         double clearanceApothemScale = 0,
         IHexTraversalCostPolicy? costPolicy = null)
     {
+        return TryGetTraversalCost(
+            snapshot,
+            layout,
+            start,
+            end,
+            footprint,
+            out cost,
+            clearanceApothemScale,
+            costPolicy,
+            null);
+    }
+
+    /// <summary>
+    /// 尝试获取线段在快照中的可通行累计成本, 并可选地收集直视检测工作量.
+    /// </summary>
+    /// <param name="snapshot">要读取的不可变导航地图快照.</param>
+    /// <param name="layout">定义格心位置、朝向和单位 Apothem 的六边形布局.</param>
+    /// <param name="start">线段起点.</param>
+    /// <param name="end">线段终点.</param>
+    /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
+    /// <param name="cost">线段可通行时得到的累计移动成本.</param>
+    /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="costPolicy">计算主穿格移动成本的策略.</param>
+    /// <param name="metrics">要更新的可选直视检测工作量统计器.</param>
+    /// <returns>当线段位于快照范围内且不接触任何膨胀后障碍时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    internal static bool TryGetTraversalCost(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexagonalWorldPoint start,
+        HexagonalWorldPoint end,
+        HexagonalFootprint footprint,
+        out double cost,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy? costPolicy,
+        HexLineOfSightMetrics? metrics)
+    {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(layout);
 
@@ -103,6 +139,8 @@ public static class HexLineOfSight
 
         foreach (HexagonalSegmentCell traversedCell in HexNavigationGeometry.TraverseSegment(layout, start, end))
         {
+            metrics?.AddTraversedCell();
+
             if (!snapshot.TryGetCell(traversedCell.Point, out HexNavigationCell traversedCellData))
             {
                 cost = 0;
@@ -111,10 +149,14 @@ public static class HexLineOfSight
 
             foreach (HexagonalCubePoint candidate in traversedCell.Point.RangeIn(queryRadius))
             {
+                metrics?.AddNearbyCellQuery();
+
                 if (!snapshot.TryGetCell(candidate, out HexNavigationCell cell) || !cell.HasObstacle)
                 {
                     continue;
                 }
+
+                metrics?.AddObstacleIntersectionTest();
 
                 if (HexNavigationGeometry.SegmentIntersectsInflatedHexagonUnchecked(
                         layout,

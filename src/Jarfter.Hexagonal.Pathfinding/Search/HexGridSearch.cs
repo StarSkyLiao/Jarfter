@@ -40,7 +40,20 @@ internal static class HexGridSearch
         );
     }
 
-    private static HexGridPath? FindPath(
+    /// <summary>
+    /// 在当前线程中执行指定连接规则的格心搜索.
+    /// </summary>
+    /// <param name="mode">要使用的连接规则.</param>
+    /// <param name="snapshot">要读取的不可变导航地图快照.</param>
+    /// <param name="layout">定义格心位置、朝向和单位 Apothem 的六边形布局.</param>
+    /// <param name="start">起点格心坐标.</param>
+    /// <param name="goal">终点格心坐标.</param>
+    /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
+    /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="costPolicy">计算主穿格移动成本的策略.</param>
+    /// <param name="requestOptions">本次格心搜索的节点、超时、取消与缓存策略.</param>
+    /// <returns>成功时得到格心航点路径; 失败时返回 <see langword="null"/>.</returns>
+    internal static HexGridPath? FindPath(
         HexGridSearchMode mode,
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
@@ -58,6 +71,12 @@ internal static class HexGridSearch
         ValidateCostPolicy(actualCostPolicy, nameof(costPolicy));
         requestOptions?.Validate();
         requestOptions?.CancellationToken.ThrowIfCancellationRequested();
+        HexPathfindingStatisticsCollector? statisticsCollector = requestOptions?.CollectStatistics == true
+            ? new HexPathfindingStatisticsCollector()
+            : null;
+        Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache = ShouldEnableLineOfSightCache(mode, requestOptions)
+            ? new Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>()
+            : null;
 
         if (!TryGetTraversableCell(snapshot, start) || !TryGetTraversableCell(snapshot, goal))
         {
@@ -66,7 +85,7 @@ internal static class HexGridSearch
 
         if (start == goal)
         {
-            return new HexGridPath([start], 0, snapshot.Version);
+            return new HexGridPath([start], 0, snapshot.Version, statisticsCollector?.CreateStatistics());
         }
 
         HexagonalWorldPoint goalCenter = layout.GetCenter(goal);
@@ -98,7 +117,7 @@ internal static class HexGridSearch
 
             if (openNode.Point == goal)
             {
-                return ReconstructPath(records, goal, currentRecord.Cost, snapshot.Version);
+                return ReconstructPath(records, goal, currentRecord.Cost, snapshot.Version, statisticsCollector);
             }
 
             if (requestOptions is { MaximumExpandedNodeCount: > 0 } && expandedNodeCount >= requestOptions.MaximumExpandedNodeCount)
@@ -107,6 +126,7 @@ internal static class HexGridSearch
             }
 
             expandedNodeCount++;
+            statisticsCollector?.AddExpandedNode();
 
             for (int direction = 0; direction < 6; direction++)
             {
@@ -127,6 +147,8 @@ internal static class HexGridSearch
                         footprint,
                         clearanceApothemScale,
                         actualCostPolicy,
+                        statisticsCollector,
+                        lineOfSightCache,
                         out HexagonalCubePoint parent,
                         out double neighborCost))
                 {
@@ -161,38 +183,48 @@ internal static class HexGridSearch
         HexagonalFootprint footprint,
         double clearanceApothemScale,
         IHexTraversalCostPolicy costPolicy,
+        HexPathfindingStatisticsCollector? statisticsCollector,
+        Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache,
         out HexagonalCubePoint parent,
         out double cost)
     {
         if (mode == HexGridSearchMode.ThetaStar && currentRecord.HasParent)
         {
             NodeRecord parentRecord = records[currentRecord.Parent];
+            statisticsCollector?.AddLineOfSightQuery(true);
 
-            if (HexLineOfSight.TryGetTraversalCost(
+            if (TryGetTraversalCost(
                     snapshot,
                     layout,
-                    layout.GetCenter(currentRecord.Parent),
-                    layout.GetCenter(neighbor),
+                    currentRecord.Parent,
+                    neighbor,
                     footprint,
                     out double parentConnectionCost,
                     clearanceApothemScale,
-                    costPolicy))
+                    costPolicy,
+                    statisticsCollector,
+                    lineOfSightCache))
             {
+                statisticsCollector?.AddSuccessfulParentLineOfSightQuery();
                 parent = currentRecord.Parent;
                 cost = parentRecord.Cost + parentConnectionCost;
                 return true;
             }
         }
 
-        if (HexLineOfSight.TryGetTraversalCost(
+        statisticsCollector?.AddLineOfSightQuery(false);
+
+        if (TryGetTraversalCost(
                 snapshot,
                 layout,
-                layout.GetCenter(current),
-                layout.GetCenter(neighbor),
+                current,
+                neighbor,
                 footprint,
                 out double connectionCost,
                 clearanceApothemScale,
-                costPolicy))
+                costPolicy,
+                statisticsCollector,
+                lineOfSightCache))
         {
             parent = current;
             cost = currentRecord.Cost + connectionCost;
@@ -202,6 +234,47 @@ internal static class HexGridSearch
         parent = default;
         cost = 0;
         return false;
+    }
+
+    private static bool TryGetTraversalCost(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexagonalCubePoint start,
+        HexagonalCubePoint end,
+        HexagonalFootprint footprint,
+        out double cost,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy costPolicy,
+        HexPathfindingStatisticsCollector? statisticsCollector,
+        Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache)
+    {
+        LineOfSightCacheKey key = new LineOfSightCacheKey(start, end);
+
+        if (lineOfSightCache is not null && lineOfSightCache.TryGetValue(key, out LineOfSightCacheEntry cacheEntry))
+        {
+            statisticsCollector?.AddLineOfSightCacheHit();
+            cost = cacheEntry.Cost;
+            return cacheEntry.IsTraversable;
+        }
+
+        if (lineOfSightCache is not null)
+        {
+            statisticsCollector?.AddLineOfSightCacheMiss();
+        }
+
+        bool isTraversable = HexLineOfSight.TryGetTraversalCost(
+            snapshot,
+            layout,
+            layout.GetCenter(start),
+            layout.GetCenter(end),
+            footprint,
+            out cost,
+            clearanceApothemScale,
+            costPolicy,
+            statisticsCollector?.LineOfSightMetrics);
+
+        lineOfSightCache?.Add(key, new LineOfSightCacheEntry(isTraversable, cost));
+        return isTraversable;
     }
 
     private static bool TryGetTraversableCell(IHexNavigationSnapshot snapshot, HexagonalCubePoint point)
@@ -221,7 +294,8 @@ internal static class HexGridSearch
         IReadOnlyDictionary<HexagonalCubePoint, NodeRecord> records,
         HexagonalCubePoint goal,
         double cost,
-        long navigationVersion)
+        long navigationVersion,
+        HexPathfindingStatisticsCollector? statisticsCollector)
     {
         List<HexagonalCubePoint> points = [];
         HexagonalCubePoint current = goal;
@@ -239,7 +313,7 @@ internal static class HexGridSearch
         }
 
         points.Reverse();
-        return new HexGridPath([.. points], cost, navigationVersion);
+        return new HexGridPath([.. points], cost, navigationVersion, statisticsCollector?.CreateStatistics());
     }
 
     private static void ValidateCostPolicy(IHexTraversalCostPolicy costPolicy, string parameterName)
@@ -257,7 +331,23 @@ internal static class HexGridSearch
             && Stopwatch.GetElapsedTime(startTimestamp) >= requestOptions.Timeout;
     }
 
+    private static bool ShouldEnableLineOfSightCache(
+        HexGridSearchMode mode,
+        HexPathfindingRequestOptions? requestOptions)
+    {
+        return requestOptions?.LineOfSightCacheMode switch
+        {
+            HexLineOfSightCacheMode.Enabled => true,
+            HexLineOfSightCacheMode.Disabled => false,
+            _ => mode == HexGridSearchMode.ThetaStar
+        };
+    }
+
     private readonly record struct OpenNode(HexagonalCubePoint Point, double Cost);
 
     private readonly record struct NodeRecord(double Cost, HexagonalCubePoint Parent, bool HasParent);
+
+    private readonly record struct LineOfSightCacheKey(HexagonalCubePoint Start, HexagonalCubePoint End);
+
+    private readonly record struct LineOfSightCacheEntry(bool IsTraversable, double Cost);
 }

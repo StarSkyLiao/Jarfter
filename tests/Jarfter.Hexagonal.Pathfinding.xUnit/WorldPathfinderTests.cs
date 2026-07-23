@@ -10,7 +10,7 @@ namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 public sealed class WorldPathfinderTests
 {
     [Fact]
-    public async Task FindPathAsync_WhenContinuousEndpointsHaveDirectLineOfSight_ShouldReturnSingleSegment()
+    public void FindPath_WhenContinuousEndpointsHaveDirectLineOfSight_ShouldReturnSingleSegment()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 9);
@@ -20,7 +20,7 @@ public sealed class WorldPathfinderTests
 
         HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance);
 
-        HexWorldPath? path = await pathfinder.FindPathAsync(
+        HexWorldPath? path = pathfinder.FindPath(
             snapshot,
             layout,
             start,
@@ -34,7 +34,7 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
-    public async Task FindPathAsync_WhenCustomCostPolicyIsConfigured_ShouldUseItForDirectPathCost()
+    public void FindPath_WhenCustomCostPolicyIsConfigured_ShouldUseItForDirectPathCost()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
@@ -45,7 +45,7 @@ public sealed class WorldPathfinderTests
             HexGridThetaStar.Instance,
             new HexWorldPathfinderOptions { CostPolicy = DoubleDistanceCostPolicy.Instance });
 
-        HexWorldPath? path = await pathfinder.FindPathAsync(
+        HexWorldPath? path = pathfinder.FindPath(
             snapshot,
             layout,
             start,
@@ -57,7 +57,7 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
-    public async Task FindPathAsync_WhenContinuousEndpointsAreBlockedByObstacle_ShouldReturnWaypointPath()
+    public void FindPath_WhenContinuousEndpointsAreBlockedByObstacle_ShouldReturnWaypointPath()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
@@ -69,7 +69,7 @@ public sealed class WorldPathfinderTests
 
         HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance);
 
-        HexWorldPath? path = await pathfinder.FindPathAsync(
+        HexWorldPath? path = pathfinder.FindPath(
             snapshot,
             layout,
             start,
@@ -93,7 +93,7 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
-    public async Task FindPathAsync_WhenCustomGridPathfinderIsSupplied_ShouldUseItForAnchoredSearch()
+    public void FindPath_WhenCustomGridPathfinderIsSupplied_ShouldUseItForAnchoredSearch()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
@@ -104,7 +104,7 @@ public sealed class WorldPathfinderTests
 
         HexWorldPathfinder worldPathfinder = new HexWorldPathfinder(pathfinder);
 
-        HexWorldPath? path = await worldPathfinder.FindPathAsync(
+        HexWorldPath? path = worldPathfinder.FindPath(
             snapshot,
             layout,
             layout.GetCenter(HexagonalCubePoint.Zero),
@@ -142,7 +142,7 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
-    public async Task FindPathAsync_WhenMapVersionChanges_ShouldMarkPriorPathAsOutdated()
+    public void FindPath_WhenMapVersionChanges_ShouldMarkPriorPathAsOutdated()
     {
         HexGridCentralNavigationMap map = new HexGridCentralNavigationMap(3);
         HexGridCentralNavigationSnapshot firstSnapshot = map.CaptureSnapshot();
@@ -151,7 +151,7 @@ public sealed class WorldPathfinderTests
         HexagonalWorldPoint goal = layout.GetCenter(new HexagonalCubePoint(3, 0));
         HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance);
 
-        HexWorldPath? path = await pathfinder.FindPathAsync(
+        HexWorldPath? path = pathfinder.FindPath(
             firstSnapshot,
             layout,
             start,
@@ -181,6 +181,28 @@ public sealed class WorldPathfinderTests
     private sealed class RecordingGridPathfinder(IHexGridPathfinder inner) : IHexGridPathfinder
     {
         public bool WasUsed { get; private set; }
+
+        public HexGridPath? FindPath(
+            IHexNavigationSnapshot snapshot,
+            HexagonalLayout layout,
+            HexagonalCubePoint start,
+            HexagonalCubePoint goal,
+            HexagonalFootprint footprint,
+            double clearanceApothemScale = 0,
+            IHexTraversalCostPolicy? costPolicy = null,
+            HexPathfindingRequestOptions? requestOptions = null)
+        {
+            WasUsed = true;
+            return inner.FindPath(
+                snapshot,
+                layout,
+                start,
+                goal,
+                footprint,
+                clearanceApothemScale,
+                costPolicy,
+                requestOptions);
+        }
 
         public ValueTask<HexGridPath?> FindPathAsync(
             IHexNavigationSnapshot snapshot,

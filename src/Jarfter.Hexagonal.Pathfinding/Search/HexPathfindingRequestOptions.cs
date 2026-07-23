@@ -24,6 +24,18 @@ public sealed class HexPathfindingRequestOptions()
     /// </summary>
     public CancellationToken CancellationToken { get; init; }
 
+    /// <summary>
+    /// 获取或初始化是否收集成功路径的搜索工作量统计.
+    /// 默认不收集, 以避免在热路径中增加诊断计数开销.
+    /// </summary>
+    public bool CollectStatistics { get; init; }
+
+    /// <summary>
+    /// 获取或初始化单次搜索中缓存格心间直视检测结果与成本的策略.
+    /// 默认自动策略会为 Theta* 启用缓存, 为 A* 关闭缓存.
+    /// </summary>
+    public HexLineOfSightCacheMode LineOfSightCacheMode { get; init; } = HexLineOfSightCacheMode.Automatic;
+
     internal void Validate()
     {
         ArgumentOutOfRangeException.ThrowIfNegative(MaximumExpandedNodeCount);
@@ -31,6 +43,11 @@ public sealed class HexPathfindingRequestOptions()
         if (Timeout != System.Threading.Timeout.InfiniteTimeSpan && Timeout <= TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(Timeout));
+        }
+
+        if (!Enum.IsDefined(LineOfSightCacheMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(LineOfSightCacheMode));
         }
     }
 }

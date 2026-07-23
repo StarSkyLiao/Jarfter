@@ -12,16 +12,22 @@ public sealed class HexGridPath
     private readonly HexagonalCubePoint[] m_Points;
 
     /// <summary>
-    /// 使用已按起点到终点排序的坐标数组、累计成本和导航地图版本初始化离散路径.
+    /// 使用已按起点到终点排序的坐标数组、累计成本、导航地图版本和可选统计初始化离散路径.
     /// </summary>
     /// <param name="points">按起点到终点顺序排列的格心坐标数组.</param>
     /// <param name="cost">路径累计移动成本.</param>
     /// <param name="navigationVersion">计算路径时使用的导航地图版本.</param>
-    internal HexGridPath(HexagonalCubePoint[] points, double cost, long navigationVersion)
+    /// <param name="statistics">启用诊断时采集的搜索工作量统计.</param>
+    internal HexGridPath(
+        HexagonalCubePoint[] points,
+        double cost,
+        long navigationVersion,
+        HexPathfindingStatistics? statistics = null)
     {
         m_Points = points;
         Cost = cost;
         NavigationVersion = navigationVersion;
+        Statistics = statistics;
     }
 
     /// <summary>
@@ -38,6 +44,12 @@ public sealed class HexGridPath
     /// 获取计算此路径时使用的导航地图版本.
     /// </summary>
     public long NavigationVersion { get; }
+
+    /// <summary>
+    /// 获取本次搜索的工作量统计.
+    /// 未启用 <see cref="HexPathfindingRequestOptions.CollectStatistics"/> 时为 <see langword="null"/>.
+    /// </summary>
+    public HexPathfindingStatistics? Statistics { get; }
 
     /// <summary>
     /// 判断此路径是否仍基于指定的导航地图版本.
