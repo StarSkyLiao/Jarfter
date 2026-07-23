@@ -31,6 +31,39 @@ public static class HexLineOfSight
         HexagonalFootprint footprint,
         double clearanceApothemScale = 0)
     {
+        return TryGetTraversalCost(
+            snapshot,
+            layout,
+            start,
+            end,
+            footprint,
+            out _,
+            clearanceApothemScale);
+    }
+
+    /// <summary>
+    /// 尝试获取线段在快照中的可通行累计成本.
+    /// 成本按线段在每个主穿格内的实际长度乘以该格的地形倍率累计.
+    /// </summary>
+    /// <param name="snapshot">要读取的不可变导航地图快照.</param>
+    /// <param name="layout">定义格心位置、朝向和单位 Apothem 的六边形布局.</param>
+    /// <param name="start">线段起点.</param>
+    /// <param name="end">线段终点.</param>
+    /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
+    /// <param name="cost">线段可通行时得到的累计移动成本.</param>
+    /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <returns>当线段位于快照范围内且不接触任何膨胀后障碍时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或快照障碍尺寸无效时抛出.</exception>
+    public static bool TryGetTraversalCost(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexagonalWorldPoint start,
+        HexagonalWorldPoint end,
+        HexagonalFootprint footprint,
+        out double cost,
+        double clearanceApothemScale = 0)
+    {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(layout);
 
@@ -53,9 +86,17 @@ public static class HexLineOfSight
             snapshot.MaximumObstacleApothemScale,
             footprint.ApothemScale,
             clearanceApothemScale);
+        double segmentLength = start.DistanceTo(end);
+        double totalCost = 0;
 
         foreach (HexagonalSegmentCell traversedCell in HexNavigationGeometry.TraverseSegment(layout, start, end))
         {
+            if (!snapshot.TryGetCell(traversedCell.Point, out HexNavigationCell traversedCellData))
+            {
+                cost = 0;
+                return false;
+            }
+
             foreach (HexagonalCubePoint candidate in traversedCell.Point.RangeIn(queryRadius))
             {
                 if (!snapshot.TryGetCell(candidate, out HexNavigationCell cell) || !cell.HasObstacle)
@@ -72,11 +113,17 @@ public static class HexLineOfSight
                         footprint.ApothemScale,
                         clearanceApothemScale))
                 {
+                    cost = 0;
                     return false;
                 }
             }
+
+            totalCost += segmentLength
+                * (traversedCell.EndFraction - traversedCell.StartFraction)
+                * traversedCellData.TraversalMultiplier;
         }
 
+        cost = totalCost;
         return true;
     }
 

@@ -62,4 +62,24 @@ public sealed class LineOfSightTests
 
         Assert.False(actual);
     }
+
+    [Fact]
+    public void TryGetTraversalCost_WhenLineCrossesTerrain_ShouldAccumulateLengthWeightedCost()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(3);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+
+        bool traversable = HexLineOfSight.TryGetTraversalCost(
+            snapshot,
+            layout,
+            layout.GetCenter(HexagonalCubePoint.Zero),
+            layout.GetCenter(new HexagonalCubePoint(1, 0)),
+            new HexagonalFootprint(0.25),
+            out double cost);
+
+        Assert.True(traversable);
+        Assert.Equal(4, cost, 12);
+    }
 }

@@ -4,7 +4,8 @@ namespace Jarfter.Hexagonal.Pathfinding.Search;
 
 /// <summary>
 /// 表示以六边形格心为节点的离散路径.
-/// 路径坐标按从起点到终点的顺序排列, 总成本使用布局的连续平面长度和地形倍率计算.
+/// 路径坐标按从起点到终点的顺序排列, 相邻节点可以是直接可见但不相邻的格心.
+/// 总成本使用布局的连续平面长度和地形倍率计算.
 /// </summary>
 public sealed class HexGridPath
 {
