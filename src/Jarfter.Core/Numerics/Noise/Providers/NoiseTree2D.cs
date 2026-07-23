@@ -64,7 +64,7 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
         }
         ref double cached = ref m_NoiseMap[index].value;
         if (cached >= 0) return cached;
-        cached = (float)Calculator.Calculate(NoiseSeed, position);
+        cached = Calculator.Calculate(NoiseSeed, position);
         return cached;
     }
 

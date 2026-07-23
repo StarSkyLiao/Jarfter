@@ -15,7 +15,7 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 public class NoiseChunk2D(int seed, Point size, Point start = default, INoiseCalculator? calculator = null)
     : INoise2DProvider
 {
-    private readonly float[] m_NoiseMap = InitArray(size.x * size.y);
+    private readonly double[] m_NoiseMap = InitArray(size.x * size.y);
 
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
@@ -30,18 +30,18 @@ public class NoiseChunk2D(int seed, Point size, Point start = default, INoiseCal
         if (localPosition.y < 0 || localPosition.y >= size.y) return -1;
         // 数组按 X 轴分组、Y 轴连续存储, 因此每组的步长必须是高度.
         int index = localPosition.x * size.y + localPosition.y;
-        float cached = m_NoiseMap[index];
+        double cached = m_NoiseMap[index];
         if (cached >= 0) return cached;
-        cached = (float)Calculator.Calculate(NoiseSeed,
+        cached = Calculator.Calculate(NoiseSeed,
             (localPosition.x + start.x, localPosition.y + start.y)
         );
         m_NoiseMap[index] = cached;
         return cached;
     }
 
-    private static float[] InitArray(int size)
+    private static double[] InitArray(int size)
     {
-        float[] noiseMap = new float[size];
+        double[] noiseMap = new double[size];
         Array.Fill(noiseMap, -1);
         return noiseMap;
     }

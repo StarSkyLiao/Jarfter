@@ -30,7 +30,7 @@ public interface INoise2DProvider
     /// </summary>
     /// <param name="position">要采样的二维单精度浮点坐标.</param>
     /// <returns>指定坐标的插值噪声值.</returns>
-    double ValueAt((float x, float y) position) => ValueAt((position.x, (double)position.y));
+    double ValueAt((float x, float y) position) => ValueAt(((double)position.x, position.y));
 
     /// <summary>
     /// 返回指定双精度浮点的噪声值(0 ~ 1).

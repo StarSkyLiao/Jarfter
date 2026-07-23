@@ -10,7 +10,7 @@ namespace Jarfter.Core.Numerics.Noise.Filters;
 /// </summary>
 /// <param name="Noise">原始的噪声图</param>
 /// <param name="Contrast">对比度</param>
-public record GaussSample(INoise2DProvider Noise, float Contrast = 1.0f) : INoise2DProvider
+public record GaussSample(INoise2DProvider Noise, double Contrast = 1.0f) : INoise2DProvider
 {
     /// <inheritdoc />
     public int NoiseSeed => Noise.NoiseSeed;
@@ -25,9 +25,9 @@ public record GaussSample(INoise2DProvider Noise, float Contrast = 1.0f) : INois
         Noise.NoiseSeed, new InternalCalculator(Noise, Contrast)
     );
 
-    private record InternalCalculator(INoise2DProvider Noise, float Contrast) : INoiseCalculator
+    private record InternalCalculator(INoise2DProvider Noise, double Contrast) : INoiseCalculator
     {
-        private static readonly float[,] s_GaussFilter =
+        private static readonly double[,] s_GaussFilter =
         {
             {
                 8, 4, 2
@@ -40,14 +40,14 @@ public record GaussSample(INoise2DProvider Noise, float Contrast = 1.0f) : INois
             },
         };
 
-        private static readonly List<(int dx, int dy, float weight)> s_SamplePoints = GetSamplePoints();
+        private static readonly List<(int dx, int dy, double weight)> s_SamplePoints = GetSamplePoints();
 
         public double Calculate(int localSeed, (int x, int y) point)
         {
             double cached = 0;
             double length = 0;
 
-            foreach ((int dx, int dy, float weight) item in s_SamplePoints)
+            foreach ((int dx, int dy, double weight) item in s_SamplePoints)
             {
                 (int, int) temp = (item.dx + point.x, item.dy + point.y);
                 cached += Noise.ValueAt(temp) * item.weight;
@@ -60,14 +60,14 @@ public record GaussSample(INoise2DProvider Noise, float Contrast = 1.0f) : INois
             return cached;
         }
 
-        private static List<(int dx, int dy, float weight)> GetSamplePoints()
+        private static List<(int dx, int dy, double weight)> GetSamplePoints()
         {
-            List<(int dx, int dy, float weight)> samplePoints = new(9);
+            List<(int dx, int dy, double weight)> samplePoints = new(9);
             for (int dx = -2; dx <= 2; dx++)
             {
                 for (int dy = -2; dy <= 2; dy++)
                 {
-                    float weight = s_GaussFilter[Math.Abs(dx), Math.Abs(dy)];
+                    double weight = s_GaussFilter[Math.Abs(dx), Math.Abs(dy)];
                     if (weight == 0) continue;
                     samplePoints.Add((dx, dy, weight));
                 }
