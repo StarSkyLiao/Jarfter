@@ -8,7 +8,7 @@ namespace Jarfter.Hexagonal.Coordinates;
 /// <param name="Q">轴向坐标的 q 分量.</param>
 /// <param name="R">轴向坐标的 r 分量.</param>
 [DebuggerDisplay("Q = {Q}, R = {R}, S = {S}")]
-public readonly record struct HexagonalCubePoint(int Q, int R)
+public readonly partial record struct HexagonalCubePoint(int Q, int R)
 {
     /// <summary>
     /// 获取隐式立方坐标的 s 分量, 且始终满足 q + r + s = 0.

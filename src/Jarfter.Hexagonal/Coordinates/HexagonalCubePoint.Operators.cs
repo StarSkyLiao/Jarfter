@@ -1,22 +1,22 @@
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace Jarfter.Hexagonal.Grid;
+namespace Jarfter.Hexagonal.Coordinates;
 
-public partial record struct HexagonalGrid<T> :
-    IUnaryPlusOperators<HexagonalGrid<T>, HexagonalGrid<T>>,
-    IUnaryNegationOperators<HexagonalGrid<T>, HexagonalGrid<T>>,
-    IAdditionOperators<HexagonalGrid<T>, HexagonalGrid<T>, HexagonalGrid<T>>,
-    ISubtractionOperators<HexagonalGrid<T>, HexagonalGrid<T>, HexagonalGrid<T>>,
-    IMultiplyOperators<HexagonalGrid<T>, T, HexagonalGrid<T>>,
-    IDivisionOperators<HexagonalGrid<T>, T, HexagonalGrid<T>>
+public readonly partial record struct HexagonalCubePoint :
+    IUnaryPlusOperators<HexagonalCubePoint, HexagonalCubePoint>,
+    IUnaryNegationOperators<HexagonalCubePoint, HexagonalCubePoint>,
+    IAdditionOperators<HexagonalCubePoint, HexagonalCubePoint, HexagonalCubePoint>,
+    ISubtractionOperators<HexagonalCubePoint, HexagonalCubePoint, HexagonalCubePoint>,
+    IMultiplyOperators<HexagonalCubePoint, int, HexagonalCubePoint>,
+    IDivisionOperators<HexagonalCubePoint, int, HexagonalCubePoint>
 {
     /// <summary>
     /// 返回坐标自身.
     /// </summary>
     /// <param name="value">坐标.</param>
     /// <returns>未改变的坐标.</returns>
-    public static HexagonalGrid<T> operator +(HexagonalGrid<T> value) => value;
+    public static HexagonalCubePoint operator +(HexagonalCubePoint value) => value;
 
     /// <summary>
     /// 返回相对于原点的反向坐标.
@@ -24,9 +24,9 @@ public partial record struct HexagonalGrid<T> :
     /// <param name="cell">坐标.</param>
     /// <returns>反向坐标.</returns>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static HexagonalGrid<T> operator -(HexagonalGrid<T> cell)
+    public static HexagonalCubePoint operator -(HexagonalCubePoint cell)
     {
-        return new HexagonalGrid<T>(-cell.Q, -cell.R);
+        return new HexagonalCubePoint(-cell.Q, -cell.R);
     }
 
     /// <summary>
@@ -36,9 +36,9 @@ public partial record struct HexagonalGrid<T> :
     /// <param name="right">右操作数.</param>
     /// <returns>分量相加后的坐标.</returns>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static HexagonalGrid<T> operator +(HexagonalGrid<T> left, HexagonalGrid<T> right)
+    public static HexagonalCubePoint operator +(HexagonalCubePoint left, HexagonalCubePoint right)
     {
-        return new HexagonalGrid<T>(left.Q + right.Q, left.R + right.R);
+        return new HexagonalCubePoint(left.Q + right.Q, left.R + right.R);
     }
 
     /// <summary>
@@ -48,9 +48,9 @@ public partial record struct HexagonalGrid<T> :
     /// <param name="right">右操作数.</param>
     /// <returns>分量相减后的坐标.</returns>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static HexagonalGrid<T> operator -(HexagonalGrid<T> left, HexagonalGrid<T> right)
+    public static HexagonalCubePoint operator -(HexagonalCubePoint left, HexagonalCubePoint right)
     {
-        return new HexagonalGrid<T>(left.Q - right.Q, left.R - right.R);
+        return new HexagonalCubePoint(left.Q - right.Q, left.R - right.R);
     }
 
     /// <summary>
@@ -60,9 +60,9 @@ public partial record struct HexagonalGrid<T> :
     /// <param name="factor">缩放因子.</param>
     /// <returns>缩放后的坐标.</returns>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static HexagonalGrid<T> operator *(HexagonalGrid<T> cell, T factor)
+    public static HexagonalCubePoint operator *(HexagonalCubePoint cell, int factor)
     {
-        return new HexagonalGrid<T>(cell.Q * factor, cell.R * factor);
+        return new HexagonalCubePoint(cell.Q * factor, cell.R * factor);
     }
 
     /// <summary>
@@ -72,9 +72,9 @@ public partial record struct HexagonalGrid<T> :
     /// <param name="cell">坐标.</param>
     /// <returns>缩放后的坐标.</returns>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static HexagonalGrid<T> operator *(T factor, HexagonalGrid<T> cell)
+    public static HexagonalCubePoint operator *(int factor, HexagonalCubePoint cell)
     {
-        return new HexagonalGrid<T>(cell.Q * factor, cell.R * factor);
+        return new HexagonalCubePoint(cell.Q * factor, cell.R * factor);
     }
 
     /// <summary>
@@ -84,9 +84,9 @@ public partial record struct HexagonalGrid<T> :
     /// <param name="factor">除数.</param>
     /// <returns>相除后的坐标.</returns>
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public static HexagonalGrid<T> operator /(HexagonalGrid<T> cell, T factor)
+    public static HexagonalCubePoint operator /(HexagonalCubePoint cell, int factor)
     {
-        return new HexagonalGrid<T>(cell.Q / factor, cell.R / factor);
+        return new HexagonalCubePoint(cell.Q / factor, cell.R / factor);
     }
 
 }
