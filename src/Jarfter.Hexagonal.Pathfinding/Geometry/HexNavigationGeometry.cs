@@ -80,6 +80,28 @@ public static class HexNavigationGeometry
         return SegmentIntersectsConvexHexagon(start, end, center, apothem, sideNormals);
     }
 
+    /// <summary>
+    /// 获取线段依次穿过的主六边形格子集合.
+    /// 枚举器不分配托管内存, 每个返回项给出该格子在线段上的参数区间.
+    /// </summary>
+    /// <param name="layout">定义格心位置、朝向和单位 Apothem 的六边形布局.</param>
+    /// <param name="start">线段起点.</param>
+    /// <param name="end">线段终点.</param>
+    /// <returns>可枚举的线段穿格集合.</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">当任一平面坐标包含非有限分量时抛出.</exception>
+    public static HexagonalSegmentTraversal TraverseSegment(
+        HexagonalLayout layout,
+        HexagonalWorldPoint start,
+        HexagonalWorldPoint end)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        ValidateFinitePoint(start, nameof(start));
+        ValidateFinitePoint(end, nameof(end));
+
+        return new HexagonalSegmentTraversal(layout, start, end, layout.Orientation);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static bool SegmentIntersectsConvexHexagon(
         HexagonalWorldPoint start,
@@ -119,6 +141,19 @@ public static class HexNavigationGeometry
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// 获取指定六边形朝向的六条边外法线.
+    /// 返回的跨度引用静态数组, 调用方不得将其用于跨线程写入或修改.
+    /// </summary>
+    /// <param name="orientation">六边形固定朝向.</param>
+    /// <returns>按逆时针顺序排列的六条单位边外法线.</returns>
+    internal static ReadOnlySpan<HexagonalWorldPoint> GetSideNormals(HexagonalOrientation orientation)
+    {
+        return orientation == HexagonalOrientation.PointyTop
+            ? s_PointyTopSideNormals
+            : s_FlatTopSideNormals;
     }
 
     private static void ValidateFinitePoint(HexagonalWorldPoint point, string parameterName)
