@@ -20,12 +20,27 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
     /// <exception cref="ArgumentNullException">当 <paramref name="map"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="version"/> 为负数时抛出.</exception>
     public HexGridCentralNavigationSnapshot(HexGridCentralProvider<HexNavigationCell> map, long version)
+        : this(map, version, CreateBake(map))
+    {
+    }
+
+    internal HexGridCentralNavigationSnapshot(
+        HexGridCentralProvider<HexNavigationCell> map,
+        long version,
+        HexGridCentralNavigationBake bake)
     {
         ArgumentNullException.ThrowIfNull(map);
         ArgumentOutOfRangeException.ThrowIfNegative(version);
+        ArgumentNullException.ThrowIfNull(bake);
+
+        if (map.Radius != bake.Radius)
+        {
+            throw new ArgumentException("烘焙地图半径必须与快照源地图一致.", nameof(bake));
+        }
 
         Radius = map.Radius;
         Version = version;
+        Bake = bake;
         m_Cells = map.Elements.ToArray();
         MaximumObstacleApothemScale = GetMaximumObstacleApothemScale(m_Cells);
         MinimumTraversalMultiplier = GetMinimumTraversalMultiplier(m_Cells);
@@ -40,6 +55,11 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
     /// 获取快照中包含的格子数量.
     /// </summary>
     public int Count => m_Cells.Length;
+
+    /// <summary>
+    /// 获取此快照共享的不可变稠密拓扑烘焙数据.
+    /// </summary>
+    public HexGridCentralNavigationBake Bake { get; }
 
     /// <inheritdoc />
     public long Version { get; }
@@ -73,6 +93,12 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         }
 
         return maximum;
+    }
+
+    private static HexGridCentralNavigationBake CreateBake(HexGridCentralProvider<HexNavigationCell> map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        return new HexGridCentralNavigationBake(map.Radius);
     }
 
     private static double GetMinimumTraversalMultiplier(ReadOnlySpan<HexNavigationCell> cells)

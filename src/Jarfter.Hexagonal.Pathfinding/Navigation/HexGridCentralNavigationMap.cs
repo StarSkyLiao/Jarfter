@@ -11,6 +11,7 @@ public sealed class HexGridCentralNavigationMap
 {
     private readonly Lock m_SyncRoot = new Lock();
     private readonly HexGridCentralProvider<HexNavigationCell> m_Cells;
+    private readonly HexGridCentralNavigationBake m_Bake;
     private long m_Version;
 
     /// <summary>
@@ -21,6 +22,7 @@ public sealed class HexGridCentralNavigationMap
     public HexGridCentralNavigationMap(int radius)
     {
         m_Cells = new HexGridCentralProvider<HexNavigationCell>(radius);
+        m_Bake = new HexGridCentralNavigationBake(radius);
     }
 
     /// <summary>
@@ -90,7 +92,7 @@ public sealed class HexGridCentralNavigationMap
     {
         lock (m_SyncRoot)
         {
-            return new HexGridCentralNavigationSnapshot(m_Cells, m_Version);
+            return new HexGridCentralNavigationSnapshot(m_Cells, m_Version, m_Bake);
         }
     }
 }

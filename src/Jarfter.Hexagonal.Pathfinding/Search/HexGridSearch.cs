@@ -172,6 +172,284 @@ internal static class HexGridSearch
         return null;
     }
 
+    /// <summary>
+    /// 使用与中心稠密快照匹配的可复用工作区执行格心搜索.
+    /// </summary>
+    /// <param name="mode">要使用的连接规则.</param>
+    /// <param name="snapshot">要读取的中心稠密导航地图快照.</param>
+    /// <param name="workspace">复用搜索状态的工作区.</param>
+    /// <param name="layout">定义格心位置、朝向和单位 Apothem 的六边形布局.</param>
+    /// <param name="start">起点格心坐标.</param>
+    /// <param name="goal">终点格心坐标.</param>
+    /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
+    /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="costPolicy">计算主穿格移动成本的策略.</param>
+    /// <param name="requestOptions">本次格心搜索的节点、超时、取消与缓存策略.</param>
+    /// <returns>成功时得到格心航点路径; 失败时返回 <see langword="null"/>.</returns>
+    internal static HexGridPath? FindPath(
+        HexGridSearchMode mode,
+        HexGridCentralNavigationSnapshot snapshot,
+        HexGridPathfindingWorkspace workspace,
+        HexagonalLayout layout,
+        HexagonalCubePoint start,
+        HexagonalCubePoint goal,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy? costPolicy,
+        HexPathfindingRequestOptions? requestOptions)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(workspace);
+        ArgumentNullException.ThrowIfNull(layout);
+
+        if (!ReferenceEquals(snapshot.Bake, workspace.Bake))
+        {
+            throw new ArgumentException("工作区必须使用当前快照的烘焙地图创建.", nameof(workspace));
+        }
+
+        IHexTraversalCostPolicy actualCostPolicy = costPolicy ?? HexTraversalMultiplierCostPolicy.Instance;
+        ValidateCostPolicy(actualCostPolicy, nameof(costPolicy));
+        requestOptions?.Validate();
+        requestOptions?.CancellationToken.ThrowIfCancellationRequested();
+        HexPathfindingStatisticsCollector? statisticsCollector = requestOptions?.CollectStatistics == true
+            ? new HexPathfindingStatisticsCollector()
+            : null;
+        workspace.BeginSearch(ShouldEnableLineOfSightCache(mode, requestOptions));
+
+        HexGridCentralNavigationBake bake = workspace.Bake;
+
+        if (!bake.TryGetIndex(start, out int startIndex)
+            || !bake.TryGetIndex(goal, out int goalIndex)
+            || !TryGetTraversableCell(snapshot, start)
+            || !TryGetTraversableCell(snapshot, goal))
+        {
+            return null;
+        }
+
+        if (startIndex == goalIndex)
+        {
+            return new HexGridPath([start], 0, snapshot.Version, statisticsCollector?.CreateStatistics());
+        }
+
+        HexagonalWorldPoint goalCenter = layout.GetCenter(goal);
+        workspace.SetRecord(startIndex, 0, -1);
+        workspace.EnqueueOrDecreasePriority(
+            startIndex,
+            GetHeuristicCost(layout.GetCenter(start), goalCenter, actualCostPolicy.MinimumCostPerUnitLength));
+        long startTimestamp = Stopwatch.GetTimestamp();
+        int expandedNodeCount = 0;
+
+        while (workspace.TryDequeue(out int currentIndex))
+        {
+            if (workspace.IsClosed(currentIndex))
+            {
+                continue;
+            }
+
+            workspace.Close(currentIndex);
+            workspace.TryGetRecord(currentIndex, out double currentCost, out int currentParentIndex);
+            requestOptions?.CancellationToken.ThrowIfCancellationRequested();
+
+            if (IsTimeoutExpired(requestOptions, startTimestamp))
+            {
+                return null;
+            }
+
+            if (currentIndex == goalIndex)
+            {
+                return ReconstructBakedPath(workspace, goalIndex, currentCost, snapshot.Version, statisticsCollector);
+            }
+
+            if (requestOptions is { MaximumExpandedNodeCount: > 0 } && expandedNodeCount >= requestOptions.MaximumExpandedNodeCount)
+            {
+                return null;
+            }
+
+            expandedNodeCount++;
+            statisticsCollector?.AddExpandedNode();
+
+            for (int direction = 0; direction < 6; direction++)
+            {
+                int neighborIndex = bake.GetNeighborIndex(currentIndex, direction);
+                if (neighborIndex < 0 || workspace.IsClosed(neighborIndex))
+                {
+                    continue;
+                }
+
+                HexagonalCubePoint neighbor = bake.GetPoint(neighborIndex);
+                if (!TryGetTraversableCell(snapshot, neighbor)
+                    || !TryGetBestBakedConnection(
+                        mode,
+                        snapshot,
+                        layout,
+                        workspace,
+                        currentIndex,
+                        currentCost,
+                        currentParentIndex,
+                        neighborIndex,
+                        footprint,
+                        clearanceApothemScale,
+                        actualCostPolicy,
+                        statisticsCollector,
+                        out int parentIndex,
+                        out double neighborCost))
+                {
+                    continue;
+                }
+
+                if (workspace.TryGetRecord(neighborIndex, out double existingCost, out _) && neighborCost >= existingCost)
+                {
+                    continue;
+                }
+
+                workspace.SetRecord(neighborIndex, neighborCost, parentIndex);
+                double priority = neighborCost + GetHeuristicCost(
+                    layout.GetCenter(neighbor),
+                    goalCenter,
+                    actualCostPolicy.MinimumCostPerUnitLength);
+                workspace.EnqueueOrDecreasePriority(neighborIndex, priority);
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryGetBestBakedConnection(
+        HexGridSearchMode mode,
+        HexGridCentralNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexGridPathfindingWorkspace workspace,
+        int currentIndex,
+        double currentCost,
+        int currentParentIndex,
+        int neighborIndex,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy costPolicy,
+        HexPathfindingStatisticsCollector? statisticsCollector,
+        out int parentIndex,
+        out double cost)
+    {
+        HexGridCentralNavigationBake bake = workspace.Bake;
+
+        if (mode == HexGridSearchMode.ThetaStar && currentParentIndex >= 0)
+        {
+            workspace.TryGetRecord(currentParentIndex, out double parentCost, out _);
+            statisticsCollector?.AddLineOfSightQuery(true);
+
+            if (TryGetBakedTraversalCost(
+                    snapshot,
+                    layout,
+                    workspace,
+                    currentParentIndex,
+                    neighborIndex,
+                    footprint,
+                    out double parentConnectionCost,
+                    clearanceApothemScale,
+                    costPolicy,
+                    statisticsCollector))
+            {
+                statisticsCollector?.AddSuccessfulParentLineOfSightQuery();
+                parentIndex = currentParentIndex;
+                cost = parentCost + parentConnectionCost;
+                return true;
+            }
+        }
+
+        statisticsCollector?.AddLineOfSightQuery(false);
+
+        if (TryGetBakedTraversalCost(
+                snapshot,
+                layout,
+                workspace,
+                currentIndex,
+                neighborIndex,
+                footprint,
+                out double connectionCost,
+                clearanceApothemScale,
+                costPolicy,
+                statisticsCollector))
+        {
+            parentIndex = currentIndex;
+            cost = currentCost + connectionCost;
+            return true;
+        }
+
+        parentIndex = -1;
+        cost = 0;
+        return false;
+    }
+
+    private static bool TryGetBakedTraversalCost(
+        HexGridCentralNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexGridPathfindingWorkspace workspace,
+        int startIndex,
+        int endIndex,
+        HexagonalFootprint footprint,
+        out double cost,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy costPolicy,
+        HexPathfindingStatisticsCollector? statisticsCollector)
+    {
+        HexGridCentralNavigationBake bake = workspace.Bake;
+        HexagonalCubePoint start = bake.GetPoint(startIndex);
+        HexagonalCubePoint end = bake.GetPoint(endIndex);
+
+        if (workspace.TryGetLineOfSightCache(start, end, out bool cachedTraversable, out cost))
+        {
+            statisticsCollector?.AddLineOfSightCacheHit();
+            return cachedTraversable;
+        }
+
+        if (workspace.UsesLineOfSightCache)
+        {
+            statisticsCollector?.AddLineOfSightCacheMiss();
+        }
+
+        bool isTraversable = HexLineOfSight.TryGetTraversalCost(
+            snapshot,
+            layout,
+            layout.GetCenter(start),
+            layout.GetCenter(end),
+            footprint,
+            out cost,
+            clearanceApothemScale,
+            costPolicy,
+            statisticsCollector?.LineOfSightMetrics);
+
+        workspace.SetLineOfSightCache(start, end, isTraversable, cost);
+        return isTraversable;
+    }
+
+    private static HexGridPath ReconstructBakedPath(
+        HexGridPathfindingWorkspace workspace,
+        int goalIndex,
+        double cost,
+        long navigationVersion,
+        HexPathfindingStatisticsCollector? statisticsCollector)
+    {
+        int count = 1;
+        int currentIndex = goalIndex;
+
+        while (workspace.TryGetRecord(currentIndex, out _, out int parentIndex) && parentIndex >= 0)
+        {
+            count++;
+            currentIndex = parentIndex;
+        }
+
+        HexagonalCubePoint[] points = new HexagonalCubePoint[count];
+        currentIndex = goalIndex;
+
+        for (int index = count - 1; index >= 0; index--)
+        {
+            points[index] = workspace.Bake.GetPoint(currentIndex);
+            workspace.TryGetRecord(currentIndex, out _, out currentIndex);
+        }
+
+        return new HexGridPath(points, cost, navigationVersion, statisticsCollector?.CreateStatistics());
+    }
+
     private static bool TryGetBestConnection(
         HexGridSearchMode mode,
         IHexNavigationSnapshot snapshot,

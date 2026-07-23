@@ -19,6 +19,8 @@ public static class GridPathfindingRunTest
     private static readonly HexagonalLayout s_Layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
     private static readonly HexagonalFootprint s_Footprint = new HexagonalFootprint(0.25);
     private static readonly HexGridCentralNavigationSnapshot s_Snapshot = CreateSnapshot();
+    private static readonly HexGridPathfindingWorkspace s_AStarWorkspace = new HexGridPathfindingWorkspace(s_Snapshot.Bake);
+    private static readonly HexGridPathfindingWorkspace s_ThetaStarWorkspace = new HexGridPathfindingWorkspace(s_Snapshot.Bake);
     private static readonly HexPathfindingRequestOptions s_DiagnosticRequestOptions = new HexPathfindingRequestOptions
     {
         CollectStatistics = true,
@@ -70,6 +72,20 @@ public static class GridPathfindingRunTest
         ]);
     }
 
+    /// <summary>
+    /// 比较无状态寻路与复用工作区寻路的时间和托管内存分配.
+    /// 此入口按顺序调用单个工作区, 不适用于并发调用同一工作区的场景.
+    /// </summary>
+    public static void RunWorkspaceComparison()
+    {
+        Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.2) }, [
+            new MethodWrapper<int>(FindPathWithAStar),
+            new MethodWrapper<int>(FindPathWithReusableWorkspaceAStar),
+            new MethodWrapper<int>(FindPathWithThetaStar),
+            new MethodWrapper<int>(FindPathWithReusableWorkspaceThetaStar)
+        ]);
+    }
+
     private static int FindPathWithAStar()
     {
         HexGridPath? path = HexGridAStar.Instance.FindPath(
@@ -92,6 +108,32 @@ public static class GridPathfindingRunTest
             s_Footprint);
 
         return path?.Points.Length ?? throw new InvalidOperationException("基准地图必须存在 Theta* 路径.");
+    }
+
+    private static int FindPathWithReusableWorkspaceAStar()
+    {
+        HexGridPath? path = HexGridAStar.Instance.FindPath(
+            s_Snapshot,
+            s_AStarWorkspace,
+            s_Layout,
+            s_Start,
+            s_Goal,
+            s_Footprint);
+
+        return path?.Points.Length ?? throw new InvalidOperationException("基准地图必须存在复用工作区的 A* 路径.");
+    }
+
+    private static int FindPathWithReusableWorkspaceThetaStar()
+    {
+        HexGridPath? path = HexGridThetaStar.Instance.FindPath(
+            s_Snapshot,
+            s_ThetaStarWorkspace,
+            s_Layout,
+            s_Start,
+            s_Goal,
+            s_Footprint);
+
+        return path?.Points.Length ?? throw new InvalidOperationException("基准地图必须存在复用工作区的 Theta* 路径.");
     }
 
     private static int FindPathWithUncachedThetaStar()
