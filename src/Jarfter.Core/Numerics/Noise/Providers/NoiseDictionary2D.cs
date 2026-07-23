@@ -12,12 +12,10 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 public class NoiseDictionary2D(int seed, INoiseCalculator? calculator = null) : INoise2DProvider
 {
     private readonly Dictionary<Point, double> m_NoiseMap = new();
+    private readonly INoiseCalculator m_Calculator = calculator ?? HashNoiseCalculator.Instance;
 
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
-
-    /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
     public double ValueAt(Point localPosition)
@@ -26,7 +24,7 @@ public class NoiseDictionary2D(int seed, INoiseCalculator? calculator = null) : 
         {
             return cached;
         }
-        cached = Calculator.Calculate(NoiseSeed, localPosition);
+        cached = m_Calculator.Calculate(NoiseSeed, localPosition);
         m_NoiseMap[localPosition] = cached;
         return cached;
     }

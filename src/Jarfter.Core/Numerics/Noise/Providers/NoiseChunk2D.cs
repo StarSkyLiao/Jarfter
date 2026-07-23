@@ -17,12 +17,10 @@ public class NoiseChunk2D(int seed, Point size, Point start = default, INoiseCal
 {
     private readonly double[] m_NoiseMap = new double[size.x * size.y];
     private readonly bool[] m_IsCached = new bool[size.x * size.y];
+    private readonly INoiseCalculator m_Calculator = calculator ?? HashNoiseCalculator.Instance;
 
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
-
-    /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
     /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="localPosition"/> 超出区块范围时引发.</exception>
@@ -35,7 +33,7 @@ public class NoiseChunk2D(int seed, Point size, Point start = default, INoiseCal
         int index = localPosition.x * size.y + localPosition.y;
         if (m_IsCached[index]) return m_NoiseMap[index];
 
-        double cached = Calculator.Calculate(NoiseSeed,
+        double cached = m_Calculator.Calculate(NoiseSeed,
             (localPosition.x + start.x, localPosition.y + start.y)
         );
         m_NoiseMap[index] = cached;

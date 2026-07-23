@@ -11,12 +11,11 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 /// <param name="calculator">用于计算噪声值的计算器.</param>
 public sealed class NoiseDirect2D(int seed, INoiseCalculator? calculator = null) : INoise2DProvider
 {
+    private readonly INoiseCalculator m_Calculator = calculator ?? HashNoiseCalculator.Instance;
+
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
 
     /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? HashNoiseCalculator.Instance;
-
-    /// <inheritdoc />
-    public double ValueAt(Point localPosition) => Calculator.Calculate(NoiseSeed, localPosition);
+    public double ValueAt(Point localPosition) => m_Calculator.Calculate(NoiseSeed, localPosition);
 }

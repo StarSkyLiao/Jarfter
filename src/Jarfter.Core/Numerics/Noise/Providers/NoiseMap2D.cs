@@ -14,13 +14,11 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 public class NoiseMap2D(int seed, INoiseCalculator? calculator = null) : INoise2DProvider
 {
     private const int ChunkSize = 16;
-    private readonly Dictionary<Point, NoiseChunk2D> m_NoiseMap = new();
+    private readonly Dictionary<Point, NoiseChunk2D> m_NoiseMap = [];
+    private readonly INoiseCalculator m_Calculator = calculator ?? HashNoiseCalculator.Instance;
 
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
-
-    /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
     public double ValueAt(Point localPosition)
@@ -44,7 +42,7 @@ public class NoiseMap2D(int seed, INoiseCalculator? calculator = null) : INoise2
         cached = new NoiseChunk2D(NoiseSeed,
             (ChunkSize, ChunkSize),
             (chunkPoint.x * ChunkSize, chunkPoint.y * ChunkSize),
-            Calculator
+            m_Calculator
         );
         m_NoiseMap[chunkPoint] = cached;
         return cached.ValueAt(localPoint);

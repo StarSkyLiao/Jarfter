@@ -18,12 +18,10 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
     private static readonly int s_Offset = (int)Math.Round(Math.Log2(ChunkSize)) * 2;
 
     private readonly Chunk[] m_NoiseMap = new Chunk[ChunkSize * ChunkSize];
+    private readonly INoiseCalculator m_Calculator = calculator ?? HashNoiseCalculator.Instance;
 
     /// <inheritdoc />
     public int NoiseSeed { get; } = seed;
-
-    /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
     public double ValueAt(Point position)
@@ -53,13 +51,13 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
         if (index > Mask)
         {
             ref NoiseTree2D? node = ref m_NoiseMap[index & Mask].node;
-            node ??= new NoiseTree2D(NoiseSeed, Calculator);
+            node ??= new NoiseTree2D(NoiseSeed, m_Calculator);
             return node.ValueAtInternal(index >> s_Offset, position);
         }
         ref Chunk cached = ref m_NoiseMap[index];
         if (cached.isValueCached) return cached.value;
 
-        cached.value = Calculator.Calculate(NoiseSeed, position);
+        cached.value = m_Calculator.Calculate(NoiseSeed, position);
         cached.isValueCached = true;
         return cached.value;
     }

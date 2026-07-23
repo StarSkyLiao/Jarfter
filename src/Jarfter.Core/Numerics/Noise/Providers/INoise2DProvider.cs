@@ -1,5 +1,3 @@
-using Jarfter.Core.Numerics.Noise.Calculators;
-
 namespace Jarfter.Core.Numerics.Noise.Providers;
 
 /// <summary>
@@ -11,11 +9,6 @@ public interface INoise2DProvider
     /// 噪声图的种子
     /// </summary>
     int NoiseSeed { get; }
-
-    /// <summary>
-    /// 目标点没有被缓存时, 使用的噪声计算方式
-    /// </summary>
-    INoiseCalculator Calculator { get; }
 
     /// <summary>
     /// 返回 position 坐标位置的采样噪声值 (0 ~ 1).

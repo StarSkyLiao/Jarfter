@@ -35,7 +35,6 @@ public sealed class NoiseProvidersTest
         NoiseConstant2D noise = new(0.75);
 
         Assert.Equal(0.75, noise.ValueAt((-12, 34)));
-        Assert.Equal(0.75, noise.Calculator.Calculate(2026, (1, 2)));
         Assert.Equal(0, noise.NoiseSeed);
     }
 
@@ -50,9 +49,10 @@ public sealed class NoiseProvidersTest
     public void NoiseDelegate2D_WhenSampled_ShouldPassSeedAndCoordinateToDelegate()
     {
         NoiseDelegate2D noise = new(2026, static (seed, point) => seed + point.x * 100 + point.y);
+        NoiseDelegate2D alternateSeed = new(100, static (seed, point) => seed + point.x * 100 + point.y);
 
         Assert.Equal(2_324, noise.ValueAt((3, -2)));
-        Assert.Equal(198, noise.Calculator.Calculate(100, (1, -2)));
+        Assert.Equal(198, alternateSeed.ValueAt((1, -2)));
     }
 
     [Fact]
@@ -175,8 +175,6 @@ public sealed class NoiseProvidersTest
     private sealed class CoordinateNoiseProvider : INoise2DProvider
     {
         public int NoiseSeed => 0;
-
-        public INoiseCalculator Calculator { get; } = new CountingNoiseCalculator();
 
         public double ValueAt((int x, int y) localPosition) => localPosition.x * 100 + localPosition.y;
     }

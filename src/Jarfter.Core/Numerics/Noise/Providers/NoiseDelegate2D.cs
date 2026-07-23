@@ -1,4 +1,3 @@
-using Jarfter.Core.Numerics.Noise.Calculators;
 using Point = (int x, int y);
 
 namespace Jarfter.Core.Numerics.Noise.Providers;
@@ -9,7 +8,7 @@ namespace Jarfter.Core.Numerics.Noise.Providers;
 /// </summary>
 /// <param name="seed">噪声图的种子.</param>
 /// <param name="valueFactory">根据种子和坐标计算噪声值的委托.</param>
-internal sealed class NoiseDelegate2D(int seed, Func<int, Point, double> valueFactory) : INoise2DProvider, INoiseCalculator
+internal sealed class NoiseDelegate2D(int seed, Func<int, Point, double> valueFactory) : INoise2DProvider
 {
     private readonly Func<int, Point, double> m_ValueFactory = valueFactory ?? throw new ArgumentNullException(nameof(valueFactory));
 
@@ -17,11 +16,5 @@ internal sealed class NoiseDelegate2D(int seed, Func<int, Point, double> valueFa
     public int NoiseSeed { get; } = seed;
 
     /// <inheritdoc />
-    public INoiseCalculator Calculator => this;
-
-    /// <inheritdoc />
-    public double ValueAt(Point localPosition) => Calculate(NoiseSeed, localPosition);
-
-    /// <inheritdoc />
-    public double Calculate(int localSeed, Point point) => m_ValueFactory(localSeed, point);
+    public double ValueAt(Point localPosition) => m_ValueFactory(NoiseSeed, localPosition);
 }

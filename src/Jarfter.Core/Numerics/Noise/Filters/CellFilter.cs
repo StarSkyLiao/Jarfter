@@ -1,4 +1,3 @@
-using Jarfter.Core.Numerics.Noise.Calculators;
 using Jarfter.Core.Numerics.Noise.Providers;
 
 namespace Jarfter.Core.Numerics.Noise.Filters;
@@ -20,9 +19,6 @@ public record CellFilter(INoise2DProvider Noise, double Boundary = 0.5) : INoise
 
     /// <inheritdoc />
     public int NoiseSeed => Noise.NoiseSeed;
-
-    /// <inheritdoc />
-    public INoiseCalculator Calculator => Noise.Calculator;
 
     /// <inheritdoc />
     public double ValueAt((int x, int y) position)

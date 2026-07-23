@@ -1,4 +1,3 @@
-using Jarfter.Core.Numerics.Noise.Calculators;
 using Jarfter.Core.Numerics.Noise.Providers;
 
 namespace Jarfter.Core.Numerics.Noise.Filters;
@@ -17,9 +16,6 @@ public record EdgeFilter(INoise2DProvider Noise) : INoise2DProvider
 
     /// <inheritdoc />
     public int NoiseSeed => Noise.NoiseSeed;
-
-    /// <inheritdoc />
-    public INoiseCalculator Calculator => Noise.Calculator;
 
     /// <inheritdoc />
     public double ValueAt((int x, int y) position)

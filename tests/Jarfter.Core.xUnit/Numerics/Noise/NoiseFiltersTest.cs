@@ -1,4 +1,3 @@
-using Jarfter.Core.Numerics.Noise.Calculators;
 using Jarfter.Core.Numerics.Noise.Filters;
 using Jarfter.Core.Numerics.Noise.Providers;
 
@@ -60,13 +59,6 @@ public sealed class NoiseFiltersTest
     {
         public int NoiseSeed => 0;
 
-        public INoiseCalculator Calculator { get; } = new DelegateNoiseCalculator();
-
         public double ValueAt((int x, int y) localPosition) => valueFactory(localPosition);
-    }
-
-    private sealed class DelegateNoiseCalculator : INoiseCalculator
-    {
-        public double Calculate(int localSeed, (int x, int y) point) => 0;
     }
 }

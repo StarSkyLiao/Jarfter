@@ -16,9 +16,6 @@ public record GaussSample(INoise2DProvider Noise, double Contrast = 1.0f) : INoi
     public int NoiseSeed => Noise.NoiseSeed;
 
     /// <inheritdoc />
-    public INoiseCalculator Calculator => Noise.Calculator;
-
-    /// <inheritdoc />
     public double ValueAt((int x, int y) position) => NoiseCache.ValueAt(position);
 
     private NoiseMap2D NoiseCache { get; } = new NoiseMap2D(

@@ -19,9 +19,6 @@ public record ScaleFilter(INoise2DProvider Noise, double Scale = 1) : INoise2DPr
     public int NoiseSeed => Noise.NoiseSeed;
 
     /// <inheritdoc />
-    public INoiseCalculator Calculator => Noise.Calculator;
-
-    /// <inheritdoc />
     public double ValueAt((int x, int y) position) => NoiseCache.ValueAt(position);
 
     private record InternalCalculator(INoise2DProvider Noise, double ScaleRate = 1) : INoiseCalculator
