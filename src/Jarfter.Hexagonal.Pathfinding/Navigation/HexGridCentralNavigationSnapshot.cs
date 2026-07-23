@@ -27,6 +27,7 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         Radius = map.Radius;
         Version = version;
         m_Cells = map.Elements.ToArray();
+        MaximumObstacleApothemScale = GetMaximumObstacleApothemScale(m_Cells);
     }
 
     /// <summary>
@@ -43,6 +44,9 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
     public long Version { get; }
 
     /// <inheritdoc />
+    public double MaximumObstacleApothemScale { get; }
+
+    /// <inheritdoc />
     public bool TryGetCell(HexagonalCubePoint point, out HexNavigationCell cell)
     {
         if (HexagonalCubePoint.Zero.DistanceTo(point) > Radius)
@@ -53,5 +57,17 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
 
         cell = m_Cells[HexGridCentralProvider<HexNavigationCell>.ToIndex(point)];
         return true;
+    }
+
+    private static double GetMaximumObstacleApothemScale(ReadOnlySpan<HexNavigationCell> cells)
+    {
+        double maximum = 0;
+
+        foreach (HexNavigationCell cell in cells)
+        {
+            maximum = Math.Max(maximum, cell.ObstacleApothemScale);
+        }
+
+        return maximum;
     }
 }

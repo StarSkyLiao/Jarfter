@@ -68,16 +68,14 @@ public static class HexNavigationGeometry
             throw new ArgumentOutOfRangeException(nameof(clearanceApothemScale));
         }
 
-        if (obstacleApothemScale == 0) return false;
-
-        HexagonalWorldPoint center = layout.GetCenter(obstaclePoint);
-        double apothem = layout.UnitApothem * (
-            obstacleApothemScale + footprint.ApothemScale + clearanceApothemScale);
-        ReadOnlySpan<HexagonalWorldPoint> sideNormals = layout.Orientation == HexagonalOrientation.PointyTop
-            ? s_PointyTopSideNormals
-            : s_FlatTopSideNormals;
-
-        return SegmentIntersectsConvexHexagon(start, end, center, apothem, sideNormals);
+        return SegmentIntersectsInflatedHexagonUnchecked(
+            layout,
+            start,
+            end,
+            obstaclePoint,
+            obstacleApothemScale,
+            footprint.ApothemScale,
+            clearanceApothemScale);
     }
 
     /// <summary>
@@ -154,6 +152,34 @@ public static class HexNavigationGeometry
         return orientation == HexagonalOrientation.PointyTop
             ? s_PointyTopSideNormals
             : s_FlatTopSideNormals;
+    }
+
+    /// <summary>
+    /// 在调用方已验证参数时, 判断线段是否与膨胀后障碍相交.
+    /// </summary>
+    /// <param name="layout">六边形布局.</param>
+    /// <param name="start">路径线段起点.</param>
+    /// <param name="end">路径线段终点.</param>
+    /// <param name="obstaclePoint">障碍格心坐标.</param>
+    /// <param name="obstacleApothemScale">障碍 Apothem 比例.</param>
+    /// <param name="footprintApothemScale">移动足迹 Apothem 比例.</param>
+    /// <param name="clearanceApothemScale">安全边距 Apothem 比例.</param>
+    /// <returns>当线段接触或进入膨胀后障碍时返回 <see langword="true"/>.</returns>
+    internal static bool SegmentIntersectsInflatedHexagonUnchecked(
+        HexagonalLayout layout,
+        HexagonalWorldPoint start,
+        HexagonalWorldPoint end,
+        HexagonalCubePoint obstaclePoint,
+        double obstacleApothemScale,
+        double footprintApothemScale,
+        double clearanceApothemScale)
+    {
+        if (obstacleApothemScale == 0) return false;
+
+        HexagonalWorldPoint center = layout.GetCenter(obstaclePoint);
+        double apothem = layout.UnitApothem * (
+            obstacleApothemScale + footprintApothemScale + clearanceApothemScale);
+        return SegmentIntersectsConvexHexagon(start, end, center, apothem, GetSideNormals(layout.Orientation));
     }
 
     private static void ValidateFinitePoint(HexagonalWorldPoint point, string parameterName)

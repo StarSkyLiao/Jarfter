@@ -1,0 +1,65 @@
+using Jarfter.Hexagonal.Coordinates;
+using Jarfter.Hexagonal.Geometry;
+using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Pathfinding.Navigation;
+
+namespace Jarfter.Hexagonal.Pathfinding.xUnit;
+
+public sealed class LineOfSightTests
+{
+    [Fact]
+    public void HasLineOfSight_WhenSegmentCrossesInflatedObstacle_ShouldReturnFalse()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+
+        bool actual = HexLineOfSight.HasLineOfSight(
+            snapshot,
+            layout,
+            new HexagonalWorldPoint(-4, 0),
+            new HexagonalWorldPoint(4, 0),
+            new HexagonalFootprint(0.25),
+            0.25);
+
+        Assert.False(actual);
+    }
+
+    [Fact]
+    public void HasLineOfSight_WhenSegmentAvoidsAllObstacles_ShouldReturnTrue()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+
+        bool actual = HexLineOfSight.HasLineOfSight(
+            snapshot,
+            layout,
+            new HexagonalWorldPoint(-4, 2),
+            new HexagonalWorldPoint(4, 2),
+            new HexagonalFootprint(0.25));
+
+        Assert.True(actual);
+    }
+
+    [Fact]
+    public void HasLineOfSight_WhenObstacleIsBesideTraversedMainCell_ShouldCheckItConservatively()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+
+        bool actual = HexLineOfSight.HasLineOfSight(
+            snapshot,
+            layout,
+            new HexagonalWorldPoint(1, -2),
+            new HexagonalWorldPoint(1, 2),
+            new HexagonalFootprint(0.25),
+            0.25);
+
+        Assert.False(actual);
+    }
+}

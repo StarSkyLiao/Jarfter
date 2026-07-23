@@ -14,6 +14,12 @@ public interface IHexNavigationSnapshot
     long Version { get; }
 
     /// <summary>
+    /// 获取快照中所有格心障碍 Apothem 比例的最大值.
+    /// 视线检测使用此值确定线段周围需要查询的最小保守格子范围.
+    /// </summary>
+    double MaximumObstacleApothemScale { get; }
+
+    /// <summary>
     /// 尝试获取指定坐标上的静态导航数据.
     /// </summary>
     /// <param name="point">要查询的轴向坐标.</param>
