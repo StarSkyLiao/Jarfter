@@ -1,10 +1,86 @@
 using Jarfter.Hexagonal.Coordinates;
+using Jarfter.Hexagonal.Geometry;
 using Jarfter.Hexagonal.MapProvider;
 
 namespace Jarfter.Hexagonal.xUnit;
 
 public sealed class HexagonalTests
 {
+    [Fact]
+    public void HexagonalWorldPoint_DistanceTo_ShouldCalculateEuclideanDistance()
+    {
+        HexagonalWorldPoint point = new HexagonalWorldPoint(2, -1);
+        HexagonalWorldPoint other = new HexagonalWorldPoint(5, 3);
+
+        Assert.Equal(5, point.DistanceTo(other));
+        Assert.Equal(0, HexagonalWorldPoint.Zero.DistanceTo(HexagonalWorldPoint.Zero));
+    }
+
+    [Fact]
+    public void HexagonalFootprint_WhenScaleIsFiniteAndPositive_ShouldRepresentApothemRatio()
+    {
+        HexagonalFootprint footprint = new HexagonalFootprint(0.5);
+
+        Assert.Equal(0.5, footprint.ApothemScale);
+        Assert.Equal(1, HexagonalFootprint.Unit.ApothemScale);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new HexagonalFootprint(0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new HexagonalFootprint(double.NaN));
+    }
+
+    [Fact]
+    public void HexagonalLayout_WhenPointyTop_ShouldConvertCentersAndVerticesUsingApothem()
+    {
+        HexagonalLayout layout = new HexagonalLayout(
+            HexagonalOrientation.PointyTop,
+            2,
+            new HexagonalWorldPoint(10, -3));
+        HexagonalFootprint footprint = new HexagonalFootprint(0.5);
+
+        Assert.Equal(new HexagonalWorldPoint(10, -3), layout.GetCenter(HexagonalCubePoint.Zero));
+        Assert.Equal(new HexagonalWorldPoint(14, -3), layout.GetCenter(new HexagonalCubePoint(1, 0)));
+        Assert.Equal(new HexagonalWorldPoint(12, -3 + 2 * Math.Sqrt(3)), layout.GetCenter(new HexagonalCubePoint(0, 1)));
+        Assert.Equal(1, layout.GetApothem(footprint));
+
+        HexagonalWorldPoint vertex = layout.GetVertex(HexagonalCubePoint.Zero, footprint, 0);
+
+        Assert.Equal(11, vertex.X, 12);
+        Assert.Equal(-3 + 1 / Math.Sqrt(3), vertex.Y, 12);
+        Assert.Throws<ArgumentOutOfRangeException>(() => layout.GetVertex(HexagonalCubePoint.Zero, footprint, 6));
+    }
+
+    [Fact]
+    public void HexagonalLayout_WhenFlatTop_ShouldUseFlatTopCenterAndVertexMapping()
+    {
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.FlatTop, 2);
+
+        Assert.Equal(new HexagonalWorldPoint(2 * Math.Sqrt(3), 2), layout.GetCenter(new HexagonalCubePoint(1, 0)));
+        Assert.Equal(new HexagonalWorldPoint(0, 4), layout.GetCenter(new HexagonalCubePoint(0, 1)));
+
+        HexagonalWorldPoint vertex = layout.GetVertex(
+            HexagonalCubePoint.Zero,
+            HexagonalFootprint.Unit,
+            0);
+
+        Assert.Equal(4 / Math.Sqrt(3), vertex.X, 12);
+        Assert.Equal(0, vertex.Y, 12);
+    }
+
+    [Theory]
+    [InlineData(HexagonalOrientation.PointyTop, 3, -2)]
+    [InlineData(HexagonalOrientation.FlatTop, -4, 5)]
+    public void HexagonalLayout_WhenConvertingCenterToNearestPoint_ShouldReturnOriginalCoordinate(
+        HexagonalOrientation orientation,
+        int q,
+        int r)
+    {
+        HexagonalLayout layout = new HexagonalLayout(orientation, 2.5, new HexagonalWorldPoint(-7, 11));
+        HexagonalCubePoint expected = new HexagonalCubePoint(q, r);
+
+        HexagonalWorldPoint center = layout.GetCenter(expected);
+
+        Assert.Equal(expected, layout.GetNearestPoint(center));
+    }
+
     [Fact]
     public void HexagonalCubePoint_FromCube_WhenComponentsSumToZero_ShouldCreateEquivalentPoint()
     {
