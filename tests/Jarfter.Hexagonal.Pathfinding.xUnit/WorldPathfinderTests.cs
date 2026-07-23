@@ -10,7 +10,7 @@ namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 public sealed class WorldPathfinderTests
 {
     [Fact]
-    public void TryFindPath_WhenContinuousEndpointsHaveDirectLineOfSight_ShouldReturnSingleSegment()
+    public async Task FindPathAsync_WhenContinuousEndpointsHaveDirectLineOfSight_ShouldReturnSingleSegment()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 9);
@@ -20,15 +20,13 @@ public sealed class WorldPathfinderTests
 
         HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance);
 
-        bool found = pathfinder.TryFindPath(
+        HexWorldPath? path = await pathfinder.FindPathAsync(
             snapshot,
             layout,
             start,
             goal,
-            new HexagonalFootprint(0.25),
-            out HexWorldPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.True(found);
         Assert.NotNull(path);
         Assert.Equal([start, goal], path.Waypoints.ToArray());
         Assert.Equal(start.DistanceTo(goal), path.Cost, 12);
@@ -36,7 +34,7 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
-    public void TryFindPath_WhenCustomCostPolicyIsConfigured_ShouldUseItForDirectPathCost()
+    public async Task FindPathAsync_WhenCustomCostPolicyIsConfigured_ShouldUseItForDirectPathCost()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
@@ -47,21 +45,19 @@ public sealed class WorldPathfinderTests
             HexGridThetaStar.Instance,
             new HexWorldPathfinderOptions { CostPolicy = DoubleDistanceCostPolicy.Instance });
 
-        bool found = pathfinder.TryFindPath(
+        HexWorldPath? path = await pathfinder.FindPathAsync(
             snapshot,
             layout,
             start,
             goal,
-            new HexagonalFootprint(0.25),
-            out HexWorldPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.True(found);
         Assert.NotNull(path);
         Assert.Equal(4, path.Cost, 12);
     }
 
     [Fact]
-    public void TryFindPath_WhenContinuousEndpointsAreBlockedByObstacle_ShouldReturnWaypointPath()
+    public async Task FindPathAsync_WhenContinuousEndpointsAreBlockedByObstacle_ShouldReturnWaypointPath()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
@@ -73,15 +69,13 @@ public sealed class WorldPathfinderTests
 
         HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance);
 
-        bool found = pathfinder.TryFindPath(
+        HexWorldPath? path = await pathfinder.FindPathAsync(
             snapshot,
             layout,
             start,
             goal,
-            footprint,
-            out HexWorldPath? path);
+            footprint);
 
-        Assert.True(found);
         Assert.NotNull(path);
         Assert.Equal(start, path.Waypoints[0]);
         Assert.Equal(goal, path.Waypoints[^1]);
@@ -99,7 +93,7 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
-    public void TryFindPath_WhenCustomGridPathfinderIsSupplied_ShouldUseItForAnchoredSearch()
+    public async Task FindPathAsync_WhenCustomGridPathfinderIsSupplied_ShouldUseItForAnchoredSearch()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
@@ -110,15 +104,13 @@ public sealed class WorldPathfinderTests
 
         HexWorldPathfinder worldPathfinder = new HexWorldPathfinder(pathfinder);
 
-        bool found = worldPathfinder.TryFindPath(
+        HexWorldPath? path = await worldPathfinder.FindPathAsync(
             snapshot,
             layout,
             layout.GetCenter(HexagonalCubePoint.Zero),
             layout.GetCenter(new HexagonalCubePoint(3, 0)),
-            footprint,
-            out HexWorldPath? path);
+            footprint);
 
-        Assert.True(found);
         Assert.NotNull(path);
         Assert.True(pathfinder.WasUsed);
     }
@@ -150,7 +142,7 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
-    public void TryFindPath_WhenMapVersionChanges_ShouldMarkPriorPathAsOutdated()
+    public async Task FindPathAsync_WhenMapVersionChanges_ShouldMarkPriorPathAsOutdated()
     {
         HexGridCentralNavigationMap map = new HexGridCentralNavigationMap(3);
         HexGridCentralNavigationSnapshot firstSnapshot = map.CaptureSnapshot();
@@ -159,15 +151,13 @@ public sealed class WorldPathfinderTests
         HexagonalWorldPoint goal = layout.GetCenter(new HexagonalCubePoint(3, 0));
         HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance);
 
-        bool found = pathfinder.TryFindPath(
+        HexWorldPath? path = await pathfinder.FindPathAsync(
             firstSnapshot,
             layout,
             start,
             goal,
-            new HexagonalFootprint(0.25),
-            out HexWorldPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.True(found);
         Assert.NotNull(path);
         Assert.True(path.IsCurrent(map.Version));
         Assert.True(map.TrySetCell(new HexagonalCubePoint(1, 0), new HexNavigationCell(1, 1)));
@@ -192,25 +182,23 @@ public sealed class WorldPathfinderTests
     {
         public bool WasUsed { get; private set; }
 
-        public bool TryFindPath(
+        public ValueTask<HexGridPath?> FindPathAsync(
             IHexNavigationSnapshot snapshot,
             HexagonalLayout layout,
             HexagonalCubePoint start,
             HexagonalCubePoint goal,
             HexagonalFootprint footprint,
-            [NotNullWhen(true)] out HexGridPath? path,
             double clearanceApothemScale = 0,
             IHexTraversalCostPolicy? costPolicy = null,
             HexPathfindingRequestOptions? requestOptions = null)
         {
             WasUsed = true;
-            return inner.TryFindPath(
+            return inner.FindPathAsync(
                 snapshot,
                 layout,
                 start,
                 goal,
                 footprint,
-                out path,
                 clearanceApothemScale,
                 costPolicy,
                 requestOptions);

@@ -9,7 +9,7 @@ namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 public sealed class GridThetaStarTests
 {
     [Fact]
-    public void TryFindPath_WhenDirectLineIsTraversable_ShouldUseStartAndGoalAsWaypoints()
+    public async Task FindPathAsync_WhenDirectLineIsTraversable_ShouldUseStartAndGoalAsWaypoints()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
@@ -20,22 +20,19 @@ public sealed class GridThetaStarTests
 
         Assert.Same(HexGridThetaStar.Instance, pathfinder);
 
-        bool found = pathfinder.TryFindPath(
+        HexGridPath? path = await pathfinder.FindPathAsync(
             snapshot,
             layout,
             HexagonalCubePoint.Zero,
             goal,
-            new HexagonalFootprint(0.25),
-            out HexGridPath? path);
-        bool aStarFound = HexGridAStar.TryFindPath(
+            new HexagonalFootprint(0.25));
+        HexGridPath? aStarPath = await HexGridAStar.Instance.FindPathAsync(
             snapshot,
             layout,
             HexagonalCubePoint.Zero,
             goal,
-            out HexGridPath? aStarPath);
+            new HexagonalFootprint(0.25));
 
-        Assert.True(found);
-        Assert.True(aStarFound);
         Assert.NotNull(path);
         Assert.NotNull(aStarPath);
         Assert.Equal([HexagonalCubePoint.Zero, goal], path.Points.ToArray());
@@ -43,7 +40,7 @@ public sealed class GridThetaStarTests
     }
 
     [Fact]
-    public void TryFindPath_WhenDirectLineIsBlocked_ShouldReturnCollisionFreeWaypointSegments()
+    public async Task FindPathAsync_WhenDirectLineIsBlocked_ShouldReturnCollisionFreeWaypointSegments()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
@@ -52,15 +49,13 @@ public sealed class GridThetaStarTests
         HexagonalFootprint footprint = new HexagonalFootprint(0.25);
         HexagonalCubePoint goal = new HexagonalCubePoint(3, 0);
 
-        bool found = HexGridThetaStar.Instance.TryFindPath(
+        HexGridPath? path = await HexGridThetaStar.Instance.FindPathAsync(
             snapshot,
             layout,
             HexagonalCubePoint.Zero,
             goal,
-            footprint,
-            out HexGridPath? path);
+            footprint);
 
-        Assert.True(found);
         Assert.NotNull(path);
         Assert.True(path.Points.Length > 2);
         Assert.DoesNotContain(new HexagonalCubePoint(1, 0), path.Points.ToArray());
@@ -77,77 +72,73 @@ public sealed class GridThetaStarTests
     }
 
     [Fact]
-    public void TryFindPath_WhenEndpointHasObstacle_ShouldReturnFalse()
+    public async Task FindPathAsync_WhenEndpointHasObstacle_ShouldReturnNull()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridThetaStar.Instance.TryFindPath(
+        HexGridPath? path = await HexGridThetaStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.FlatTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(1, 0),
-            new HexagonalFootprint(0.25),
-            out HexGridPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.False(found);
         Assert.Null(path);
     }
 
     [Fact]
-    public void TryFindPath_WhenExpandedNodeBudgetIsExhausted_ShouldReturnFalse()
+    public async Task FindPathAsync_WhenExpandedNodeBudgetIsExhausted_ShouldReturnNull()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridThetaStar.Instance.TryFindPath(
+        HexGridPath? path = await HexGridThetaStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(3, 0),
             new HexagonalFootprint(0.25),
-            out HexGridPath? path,
             requestOptions: new HexPathfindingRequestOptions { MaximumExpandedNodeCount = 1 });
 
-        Assert.False(found);
         Assert.Null(path);
     }
 
     [Fact]
-    public void TryFindPath_WhenRequestIsCancelled_ShouldThrow()
+    public async Task FindPathAsync_WhenRequestIsCancelled_ShouldThrow()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         using CancellationTokenSource cancellationSource = new CancellationTokenSource();
         cancellationSource.Cancel();
 
-        Assert.Throws<OperationCanceledException>(() => HexGridThetaStar.Instance.TryFindPath(
-            snapshot,
-            new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
-            HexagonalCubePoint.Zero,
-            new HexagonalCubePoint(1, 0),
-            new HexagonalFootprint(0.25),
-            out _,
-            requestOptions: new HexPathfindingRequestOptions { CancellationToken = cancellationSource.Token }));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        {
+            await HexGridThetaStar.Instance.FindPathAsync(
+                snapshot,
+                new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
+                HexagonalCubePoint.Zero,
+                new HexagonalCubePoint(1, 0),
+                new HexagonalFootprint(0.25),
+                requestOptions: new HexPathfindingRequestOptions { CancellationToken = cancellationSource.Token });
+        });
     }
 
     [Fact]
-    public void TryFindPath_WhenSearchTimesOut_ShouldReturnFalse()
+    public async Task FindPathAsync_WhenSearchTimesOut_ShouldReturnNull()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridThetaStar.Instance.TryFindPath(
+        HexGridPath? path = await HexGridThetaStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(3, 0),
             new HexagonalFootprint(0.25),
-            out HexGridPath? path,
             requestOptions: new HexPathfindingRequestOptions { Timeout = TimeSpan.FromTicks(1) });
 
-        Assert.False(found);
         Assert.Null(path);
     }
 }

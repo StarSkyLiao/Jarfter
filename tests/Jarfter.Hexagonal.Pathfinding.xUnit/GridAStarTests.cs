@@ -9,21 +9,20 @@ namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 public sealed class GridAStarTests
 {
     [Fact]
-    public void TryFindPath_WhenStraightRouteIsTraversable_ShouldReturnLowestCostPath()
+    public async Task FindPathAsync_WhenStraightRouteIsTraversable_ShouldReturnLowestCostPath()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridAStar.TryFindPath(
+        HexGridPath? path = await HexGridAStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(3, 0),
-            out HexGridPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.True(found);
         Assert.NotNull(path);
-        Assert.Equal(6, path.Cost);
+        Assert.Equal(6, path.Cost, 12);
         Assert.Equal(
             [
                 new HexagonalCubePoint(0, 0),
@@ -35,20 +34,19 @@ public sealed class GridAStarTests
     }
 
     [Fact]
-    public void TryFindPath_WhenStraightRouteContainsObstacle_ShouldFindDetour()
+    public async Task FindPathAsync_WhenStraightRouteContainsObstacle_ShouldFindDetour()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridAStar.TryFindPath(
+        HexGridPath? path = await HexGridAStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(3, 0),
-            out HexGridPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.True(found);
         Assert.NotNull(path);
         Assert.True(path.Cost > 6);
         Assert.DoesNotContain(new HexagonalCubePoint(1, 0), path.Points.ToArray());
@@ -60,61 +58,58 @@ public sealed class GridAStarTests
     }
 
     [Fact]
-    public void TryFindPath_WhenDirectTerrainIsExpensive_ShouldPreferLowerCostDetour()
+    public async Task FindPathAsync_WhenDirectTerrainIsExpensive_ShouldPreferLowerCostDetour()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridAStar.TryFindPath(
+        HexGridPath? path = await HexGridAStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.FlatTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(2, 0),
-            out HexGridPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.True(found);
         Assert.NotNull(path);
-        Assert.Equal(6, path.Cost);
+        Assert.Equal(6, path.Cost, 12);
         Assert.DoesNotContain(new HexagonalCubePoint(1, 0), path.Points.ToArray());
     }
 
     [Fact]
-    public void TryFindPath_WhenEndpointHasObstacle_ShouldReturnFalse()
+    public async Task FindPathAsync_WhenEndpointHasObstacle_ShouldReturnNull()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
-        bool found = HexGridAStar.TryFindPath(
+        HexGridPath? path = await HexGridAStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(1, 0),
-            out HexGridPath? path);
+            new HexagonalFootprint(0.25));
 
-        Assert.False(found);
         Assert.Null(path);
     }
 
     [Fact]
-    public void TryFindPath_WhenCustomCostPolicyIgnoresTerrain_ShouldUseShortestRoute()
+    public async Task FindPathAsync_WhenCustomCostPolicyIgnoresTerrain_ShouldUseShortestRoute()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 7);
 
-        bool found = HexGridAStar.TryFindPath(
+        HexGridPath? path = await HexGridAStar.Instance.FindPathAsync(
             snapshot,
             new HexagonalLayout(HexagonalOrientation.FlatTop, 1),
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(2, 0),
-            out HexGridPath? path,
-            UnitDistanceCostPolicy.Instance);
+            new HexagonalFootprint(0.25),
+            costPolicy: UnitDistanceCostPolicy.Instance);
 
-        Assert.True(found);
         Assert.NotNull(path);
-        Assert.Equal(4, path.Cost);
+        Assert.Equal(4, path.Cost, 12);
         Assert.Equal(7, path.NavigationVersion);
         Assert.True(path.IsCurrent(7));
         Assert.False(path.IsCurrent(8));

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
@@ -69,20 +68,39 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
     /// <param name="start">移动对象的连续世界坐标起点.</param>
     /// <param name="goal">移动对象的连续世界坐标终点.</param>
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
-    /// <param name="path">查找成功时得到的连续世界坐标路径.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
     /// <param name="requestOptions">本次格心搜索的节点、超时与取消限制; 为 <see langword="null"/> 时不限制.</param>
-    /// <returns>当起终点可通行且已装配的查找器返回可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    /// <returns>表示异步搜索操作的值任务. 成功时结果为连续世界坐标路径; 不可达、超时或超出节点预算时结果为 <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或坐标无效时抛出.</exception>
     /// <exception cref="OperationCanceledException">当 <paramref name="requestOptions"/> 中的取消令牌被取消时抛出.</exception>
-    public bool TryFindPath(
+    public ValueTask<HexWorldPath?> FindPathAsync(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
         HexagonalWorldPoint start,
         HexagonalWorldPoint goal,
         HexagonalFootprint footprint,
-        [NotNullWhen(true)] out HexWorldPath? path,
+        double clearanceApothemScale = 0,
+        HexPathfindingRequestOptions? requestOptions = null)
+    {
+        return new ValueTask<HexWorldPath?>(Task.Run(
+            () => TryFindPathCoreAsync(
+                snapshot,
+                layout,
+                start,
+                goal,
+                footprint,
+                clearanceApothemScale,
+                requestOptions),
+            requestOptions?.CancellationToken ?? CancellationToken.None));
+    }
+
+    private async Task<HexWorldPath?> TryFindPathCoreAsync(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexagonalWorldPoint start,
+        HexagonalWorldPoint goal,
+        HexagonalFootprint footprint,
         double clearanceApothemScale = 0,
         HexPathfindingRequestOptions? requestOptions = null)
     {
@@ -101,8 +119,7 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                 clearanceApothemScale,
                 Options.CostPolicy))
         {
-            path = new HexWorldPath([start, goal], directCost, snapshot.Version);
-            return true;
+            return new HexWorldPath([start, goal], directCost, snapshot.Version);
         }
 
         if (!TryGetAnchor(
@@ -122,20 +139,24 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                 clearanceApothemScale,
                 requestOptions,
                 out HexagonalCubePoint goalAnchor,
-                out _)
-            || !GridPathfinder.TryFindPath(
-                snapshot,
-                layout,
-                startAnchor,
-                goalAnchor,
-                footprint,
-                out HexGridPath? gridPath,
-                clearanceApothemScale,
-                Options.CostPolicy,
-                requestOptions))
+                out _))
         {
-            path = null;
-            return false;
+            return null;
+        }
+
+        HexGridPath? gridPath = await GridPathfinder.FindPathAsync(
+            snapshot,
+            layout,
+            startAnchor,
+            goalAnchor,
+            footprint,
+            clearanceApothemScale,
+            Options.CostPolicy,
+            requestOptions);
+
+        if (gridPath is null)
+        {
+            return null;
         }
 
         List<HexagonalWorldPoint> waypoints = [start];
@@ -154,12 +175,10 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
 
         if (!TryGetPathCost(snapshot, layout, waypoints, footprint, clearanceApothemScale, out double cost))
         {
-            path = null;
-            return false;
+            return null;
         }
 
-        path = new HexWorldPath([.. waypoints], cost, snapshot.Version);
-        return true;
+        return new HexWorldPath([.. waypoints], cost, snapshot.Version);
     }
 
     private bool TryGetAnchor(
