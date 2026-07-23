@@ -42,6 +42,7 @@ public sealed class NavigationSnapshotTests
         Assert.Equal(1, snapshot.Radius);
         Assert.Equal(7, snapshot.Count);
         Assert.Equal(0.8, snapshot.MaximumObstacleApothemScale);
+        Assert.Equal(1, snapshot.MinimumTraversalMultiplier);
         Assert.True(snapshot.TryGetCell(point, out HexNavigationCell cell));
         Assert.Equal(2, cell.TraversalMultiplier);
         Assert.Equal(0.8, cell.ObstacleApothemScale);

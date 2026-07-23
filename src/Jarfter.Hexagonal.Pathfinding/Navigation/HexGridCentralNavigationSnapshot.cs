@@ -28,6 +28,7 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         Version = version;
         m_Cells = map.Elements.ToArray();
         MaximumObstacleApothemScale = GetMaximumObstacleApothemScale(m_Cells);
+        MinimumTraversalMultiplier = GetMinimumTraversalMultiplier(m_Cells);
     }
 
     /// <summary>
@@ -45,6 +46,9 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
 
     /// <inheritdoc />
     public double MaximumObstacleApothemScale { get; }
+
+    /// <inheritdoc />
+    public double MinimumTraversalMultiplier { get; }
 
     /// <inheritdoc />
     public bool TryGetCell(HexagonalCubePoint point, out HexNavigationCell cell)
@@ -69,5 +73,20 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         }
 
         return maximum;
+    }
+
+    private static double GetMinimumTraversalMultiplier(ReadOnlySpan<HexNavigationCell> cells)
+    {
+        double minimum = double.PositiveInfinity;
+
+        foreach (HexNavigationCell cell in cells)
+        {
+            if (!cell.HasObstacle)
+            {
+                minimum = Math.Min(minimum, cell.TraversalMultiplier);
+            }
+        }
+
+        return double.IsPositiveInfinity(minimum) ? 1 : minimum;
     }
 }

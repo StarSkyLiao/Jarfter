@@ -20,6 +20,12 @@ public interface IHexNavigationSnapshot
     double MaximumObstacleApothemScale { get; }
 
     /// <summary>
+    /// 获取所有可作为格心搜索节点的格子中最小的地形移动倍率.
+    /// A* 使用此值构造可采纳且一致的启发函数.
+    /// </summary>
+    double MinimumTraversalMultiplier { get; }
+
+    /// <summary>
     /// 尝试获取指定坐标上的静态导航数据.
     /// </summary>
     /// <param name="point">要查询的轴向坐标.</param>
