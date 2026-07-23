@@ -19,6 +19,43 @@ public sealed class NoiseProvidersTest
     }
 
     [Fact]
+    public void NoiseDirect2D_WhenCustomCalculatorProvided_ShouldCalculateWithoutCaching()
+    {
+        CountingNoiseCalculator calculator = new();
+        NoiseDirect2D noise = new(2026, calculator);
+
+        Assert.Equal(298, noise.ValueAt((3, -2)));
+        Assert.Equal(298, noise.ValueAt((3, -2)));
+        Assert.Equal(2, calculator.CallCount);
+    }
+
+    [Fact]
+    public void NoiseConstant2D_WhenValidValueProvided_ShouldReturnValueAtAnyCoordinate()
+    {
+        NoiseConstant2D noise = new(0.75);
+
+        Assert.Equal(0.75, noise.ValueAt((-12, 34)));
+        Assert.Equal(0.75, noise.Calculator.Calculate(2026, (1, 2)));
+        Assert.Equal(0, noise.NoiseSeed);
+    }
+
+    [Fact]
+    public void NoiseConstant2D_WhenValueIsOutsideUnitRange_ShouldThrowArgumentOutOfRangeException()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new NoiseConstant2D(-0.01));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new NoiseConstant2D(double.NaN));
+    }
+
+    [Fact]
+    public void NoiseDelegate2D_WhenSampled_ShouldPassSeedAndCoordinateToDelegate()
+    {
+        NoiseDelegate2D noise = new(2026, static (seed, point) => seed + point.x * 100 + point.y);
+
+        Assert.Equal(2_324, noise.ValueAt((3, -2)));
+        Assert.Equal(198, noise.Calculator.Calculate(100, (1, -2)));
+    }
+
+    [Fact]
     public void NoiseDictionary2D_WhenCoordinateRequestedRepeatedly_ShouldCacheCalculatedValue()
     {
         CountingNoiseCalculator calculator = new();
