@@ -35,7 +35,7 @@ public record CellFilter(INoise2DProvider Noise, double Boundary = 0.5) : INoise
             {
                 double value = Noise.ValueAt((item.dx + position.x, item.dy + position.y));
                 if (value >= Boundary) count++;
-                if (count > 1) return 1 - centerValue;
+                if (count >= 3) return 1 - centerValue;
             }
         }
         else
@@ -44,7 +44,7 @@ public record CellFilter(INoise2DProvider Noise, double Boundary = 0.5) : INoise
             {
                 double value = Noise.ValueAt((item.dx + position.x, item.dy + position.y));
                 if (value < Boundary) count++;
-                if (count > 1) return 1 - centerValue;
+                if (count >= 3) return 1 - centerValue;
             }
         }
         return centerValue;

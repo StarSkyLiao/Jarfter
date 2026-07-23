@@ -1,5 +1,4 @@
 using Jarfter.Core.Numerics.Noise.Calculators;
-using Jarfter.Core.Numerics.Random;
 using Point = (int x, int y);
 
 namespace Jarfter.Core.Numerics.Noise.Providers;
@@ -18,7 +17,7 @@ public class NoiseDictionary2D(int seed, INoiseCalculator? calculator = null) : 
     public int NoiseSeed { get; } = seed;
 
     /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? new RandomNoiseCalculator(new HashRandom(0));
+    public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
     public double ValueAt(Point localPosition)

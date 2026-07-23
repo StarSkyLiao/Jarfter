@@ -4,7 +4,7 @@ using Jarfter.Core.Numerics.Noise.Providers;
 namespace Jarfter.Core.Numerics.Noise.Filters;
 
 /// <summary>
-/// 用于平滑噪声图.
+/// 使用告诉采样的方式来平滑噪声图.
 /// 在原始噪声的基础上,
 /// 通过结合 sampleRadius 范围内其他原始噪声点的数值进行平滑.
 /// </summary>
@@ -27,6 +27,19 @@ public record GaussSample(INoise2DProvider Noise, float Contrast = 1.0f) : INois
 
     private record InternalCalculator(INoise2DProvider Noise, float Contrast) : INoiseCalculator
     {
+        private static readonly float[,] s_GaussFilter =
+        {
+            {
+                8, 4, 2
+            },
+            {
+                4, 3, 1
+            },
+            {
+                2, 1, 0
+            },
+        };
+
         private static readonly List<(int dx, int dy, float weight)> s_SamplePoints = GetSamplePoints();
 
         public double Calculate(int localSeed, (int x, int y) point)
@@ -42,23 +55,10 @@ public record GaussSample(INoise2DProvider Noise, float Contrast = 1.0f) : INois
             }
 
             cached /= length;
-            cached = (Contrast * Math.Sqrt(length) * (cached - 0.5f) + 0.5f).Clamp01();
+            cached = (Contrast * (cached - 0.5f) + 0.5f).Clamp01();
 
             return cached;
         }
-
-        private static readonly float[,] s_GaussFilter =
-        {
-            {
-                8, 4, 2
-            },
-            {
-                4, 3, 1
-            },
-            {
-                2, 1, 0
-            },
-        };
 
         private static List<(int dx, int dy, float weight)> GetSamplePoints()
         {

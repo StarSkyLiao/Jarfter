@@ -32,11 +32,20 @@ public sealed class NoiseFiltersTest
     }
 
     [Fact]
+    public void CellFilter_WhenThreeAdjacentValuesCrossBoundary_ShouldInvertOriginalValue()
+    {
+        CellFilter filter = new(new DelegateNoiseProvider(point =>
+            point is (1, 0) or (-1, 0) or (0, 1) ? 0.8 : 0.2));
+
+        Assert.Equal(0.8, filter.ValueAt((0, 0)));
+    }
+
+    [Fact]
     public void GaussSample_WhenSourceIsConstant_ShouldPreserveConstantValue()
     {
         GaussSample filter = new(new DelegateNoiseProvider(static _ => 0.6));
 
-        Assert.Equal(0.6, filter.ValueAt((4, -9)));
+        Assert.Equal(0.6, filter.ValueAt((4, -9)), precision: 6);
     }
 
     [Fact]

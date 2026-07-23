@@ -6,6 +6,19 @@ namespace Jarfter.Core.xUnit.Numerics.Noise;
 public sealed class NoiseProvidersTest
 {
     [Fact]
+    public void RandomNoiseCalculator_WhenSameSeedAndCoordinateProvided_ShouldReturnDeterministicValue()
+    {
+        HashNoiseCalculator calculator = new();
+
+        double first = calculator.Calculate(2026, (-3, 9));
+        double second = calculator.Calculate(2026, (-3, 9));
+
+        Assert.Equal(first, second);
+        Assert.InRange(first, 0, 1);
+        Assert.True(first < 1);
+    }
+
+    [Fact]
     public void NoiseDictionary2D_WhenCoordinateRequestedRepeatedly_ShouldCacheCalculatedValue()
     {
         CountingNoiseCalculator calculator = new();

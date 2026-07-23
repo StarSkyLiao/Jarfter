@@ -1,6 +1,4 @@
-using System.Runtime.CompilerServices;
 using Jarfter.Core.Numerics.Noise.Calculators;
-using Jarfter.Core.Numerics.Random;
 using Point = (int x, int y);
 
 namespace Jarfter.Core.Numerics.Noise.Providers;
@@ -23,19 +21,21 @@ public class NoiseChunk2D(int seed, Point size, Point start = default, INoiseCal
     public int NoiseSeed { get; } = seed;
 
     /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? new RandomNoiseCalculator(new HashRandom(0));
+    public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
     public double ValueAt(Point localPosition)
     {
         if (localPosition.x < 0 || localPosition.x >= size.x) return -1;
         if (localPosition.y < 0 || localPosition.y >= size.y) return -1;
-        float cached = m_NoiseMap[localPosition.x * size.x + localPosition.y];
+        // 数组按 X 轴分组、Y 轴连续存储, 因此每组的步长必须是高度.
+        int index = localPosition.x * size.y + localPosition.y;
+        float cached = m_NoiseMap[index];
         if (cached >= 0) return cached;
         cached = (float)Calculator.Calculate(NoiseSeed,
             (localPosition.x + start.x, localPosition.y + start.y)
         );
-        m_NoiseMap[localPosition.x * size.x + localPosition.y] = cached;
+        m_NoiseMap[index] = cached;
         return cached;
     }
 

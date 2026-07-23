@@ -5,7 +5,6 @@
 //------------------------------------------------------------
 
 using Jarfter.Core.Numerics.Noise.Calculators;
-using Jarfter.Core.Numerics.Random;
 using Point = (int x, int y);
 using Chunk = (Jarfter.Core.Numerics.Noise.Providers.NoiseTree2D? node, double value);
 
@@ -30,7 +29,7 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
     public int NoiseSeed { get; } = seed;
 
     /// <inheritdoc />
-    public INoiseCalculator Calculator { get; } = calculator ?? new RandomNoiseCalculator(new HashRandom(0));
+    public INoiseCalculator Calculator { get; } = calculator ?? new HashNoiseCalculator();
 
     /// <inheritdoc />
     public double ValueAt(Point position)
@@ -39,8 +38,8 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
 
         static ulong PointToIndex(Point point)
         {
-            ulong item1 = RotateLeft(point.x);
-            ulong item2 = RotateLeft(point.y);
+            uint item1 = EncodeCoordinate(point.x);
+            uint item2 = EncodeCoordinate(point.y);
             ulong result = 0;
             for (int i = 0; i < 32; ++i)
             {
@@ -51,7 +50,8 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
             return result;
         }
 
-        static ulong RotateLeft(int value) => (ulong)(value > 0 ? value << 1 : (-value << 1) & 1);
+        // ZigZag 编码会将有符号坐标一一映射为无符号值, 再交织两个坐标的位以形成 Morton 索引.
+        static uint EncodeCoordinate(int value) => (uint)(value << 1) ^ (uint)(value >> 31);
     }
 
     private double ValueAtInternal(ulong index, Point position)
@@ -59,7 +59,7 @@ public class NoiseTree2D(int seed, INoiseCalculator? calculator = null) : INoise
         if (index > Mask)
         {
             ref NoiseTree2D? node = ref m_NoiseMap[index & Mask].node;
-            node ??= new NoiseTree2D(NoiseSeed, calculator);
+            node ??= new NoiseTree2D(NoiseSeed, Calculator);
             return node.ValueAtInternal(index >> s_Offset, position);
         }
         ref double cached = ref m_NoiseMap[index].value;
