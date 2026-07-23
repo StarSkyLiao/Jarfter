@@ -21,6 +21,8 @@ public interface IHexGridPathfinder
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="path">查找成功时得到的格心航点路径.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="costPolicy">计算主穿格移动成本的策略; 为 <see langword="null"/> 时使用默认地形倍率策略.</param>
+    /// <param name="requestOptions">本次格心搜索的节点、超时与取消限制; 为 <see langword="null"/> 时不限制.</param>
     /// <returns>当存在可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     bool TryFindPath(
         IHexNavigationSnapshot snapshot,
@@ -29,5 +31,7 @@ public interface IHexGridPathfinder
         HexagonalCubePoint goal,
         HexagonalFootprint footprint,
         [NotNullWhen(true)] out HexGridPath? path,
-        double clearanceApothemScale = 0);
+        double clearanceApothemScale = 0,
+        IHexTraversalCostPolicy? costPolicy = null,
+        HexPathfindingRequestOptions? requestOptions = null);
 }

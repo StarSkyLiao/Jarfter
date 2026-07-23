@@ -20,6 +20,7 @@ public interface IHexWorldPathfinder
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="path">查找成功时得到的连续世界坐标路径.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="requestOptions">本次格心搜索的节点、超时与取消限制; 为 <see langword="null"/> 时不限制.</param>
     /// <returns>当起终点可通行且存在可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     bool TryFindPath(
         IHexNavigationSnapshot snapshot,
@@ -28,5 +29,6 @@ public interface IHexWorldPathfinder
         HexagonalWorldPoint goal,
         HexagonalFootprint footprint,
         [NotNullWhen(true)] out HexWorldPath? path,
-        double clearanceApothemScale = 0);
+        double clearanceApothemScale = 0,
+        HexPathfindingRequestOptions? requestOptions = null);
 }

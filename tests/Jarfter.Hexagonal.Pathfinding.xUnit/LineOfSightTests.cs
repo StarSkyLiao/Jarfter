@@ -82,4 +82,41 @@ public sealed class LineOfSightTests
         Assert.True(traversable);
         Assert.Equal(4, cost, 12);
     }
+
+    [Fact]
+    public void TryGetTraversalCost_WhenCustomCostPolicyIsSupplied_ShouldUseIt()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(3);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+
+        bool traversable = HexLineOfSight.TryGetTraversalCost(
+            snapshot,
+            layout,
+            layout.GetCenter(HexagonalCubePoint.Zero),
+            layout.GetCenter(new HexagonalCubePoint(1, 0)),
+            new HexagonalFootprint(0.25),
+            out double cost,
+            costPolicy: UnitDistanceCostPolicy.Instance);
+
+        Assert.True(traversable);
+        Assert.Equal(2, cost, 12);
+    }
+
+    private sealed class UnitDistanceCostPolicy : IHexTraversalCostPolicy
+    {
+        public static UnitDistanceCostPolicy Instance { get; } = new UnitDistanceCostPolicy();
+
+        private UnitDistanceCostPolicy()
+        {
+        }
+
+        public double MinimumCostPerUnitLength => 1;
+
+        public double GetTraversalCost(double length, HexNavigationCell cell)
+        {
+            return length;
+        }
+    }
 }

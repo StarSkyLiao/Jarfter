@@ -20,6 +20,7 @@ public static class HexLineOfSight
     /// <param name="end">线段终点.</param>
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="costPolicy">计算主穿格移动成本的策略; 为 <see langword="null"/> 时使用默认地形倍率策略.</param>
     /// <returns>当线段不接触任何膨胀后障碍时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或快照障碍尺寸无效时抛出.</exception>
@@ -29,7 +30,8 @@ public static class HexLineOfSight
         HexagonalWorldPoint start,
         HexagonalWorldPoint end,
         HexagonalFootprint footprint,
-        double clearanceApothemScale = 0)
+        double clearanceApothemScale = 0,
+        IHexTraversalCostPolicy? costPolicy = null)
     {
         return TryGetTraversalCost(
             snapshot,
@@ -38,12 +40,13 @@ public static class HexLineOfSight
             end,
             footprint,
             out _,
-            clearanceApothemScale);
+            clearanceApothemScale,
+            costPolicy);
     }
 
     /// <summary>
     /// 尝试获取线段在快照中的可通行累计成本.
-    /// 成本按线段在每个主穿格内的实际长度乘以该格的地形倍率累计.
+    /// 成本按线段在每个主穿格内的实际长度和指定策略累计.
     /// </summary>
     /// <param name="snapshot">要读取的不可变导航地图快照.</param>
     /// <param name="layout">定义格心位置、朝向和单位 Apothem 的六边形布局.</param>
@@ -52,6 +55,7 @@ public static class HexLineOfSight
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="cost">线段可通行时得到的累计移动成本.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="costPolicy">计算主穿格移动成本的策略; 为 <see langword="null"/> 时使用默认地形倍率策略.</param>
     /// <returns>当线段位于快照范围内且不接触任何膨胀后障碍时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或快照障碍尺寸无效时抛出.</exception>
@@ -62,10 +66,18 @@ public static class HexLineOfSight
         HexagonalWorldPoint end,
         HexagonalFootprint footprint,
         out double cost,
-        double clearanceApothemScale = 0)
+        double clearanceApothemScale = 0,
+        IHexTraversalCostPolicy? costPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(layout);
+
+        IHexTraversalCostPolicy actualCostPolicy = costPolicy ?? HexTraversalMultiplierCostPolicy.Instance;
+
+        if (!double.IsFinite(actualCostPolicy.MinimumCostPerUnitLength) || actualCostPolicy.MinimumCostPerUnitLength < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(costPolicy));
+        }
 
         if (!double.IsFinite(footprint.ApothemScale) || footprint.ApothemScale <= 0)
         {
@@ -118,9 +130,20 @@ public static class HexLineOfSight
                 }
             }
 
-            totalCost += segmentLength
-                * (traversedCell.EndFraction - traversedCell.StartFraction)
-                * traversedCellData.TraversalMultiplier;
+            double sectionLength = segmentLength * (traversedCell.EndFraction - traversedCell.StartFraction);
+            double sectionCost = actualCostPolicy.GetTraversalCost(sectionLength, traversedCellData);
+
+            if (!double.IsFinite(sectionCost) || sectionCost < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(costPolicy));
+            }
+
+            totalCost += sectionCost;
+        }
+
+        if (!double.IsFinite(totalCost))
+        {
+            throw new ArgumentOutOfRangeException(nameof(costPolicy));
         }
 
         cost = totalCost;

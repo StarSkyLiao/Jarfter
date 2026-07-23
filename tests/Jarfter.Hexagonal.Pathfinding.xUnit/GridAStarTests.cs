@@ -96,4 +96,44 @@ public sealed class GridAStarTests
         Assert.False(found);
         Assert.Null(path);
     }
+
+    [Fact]
+    public void TryFindPath_WhenCustomCostPolicyIgnoresTerrain_ShouldUseShortestRoute()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(5);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 7);
+
+        bool found = HexGridAStar.TryFindPath(
+            snapshot,
+            new HexagonalLayout(HexagonalOrientation.FlatTop, 1),
+            HexagonalCubePoint.Zero,
+            new HexagonalCubePoint(2, 0),
+            out HexGridPath? path,
+            UnitDistanceCostPolicy.Instance);
+
+        Assert.True(found);
+        Assert.NotNull(path);
+        Assert.Equal(4, path.Cost);
+        Assert.Equal(7, path.NavigationVersion);
+        Assert.True(path.IsCurrent(7));
+        Assert.False(path.IsCurrent(8));
+        Assert.Contains(new HexagonalCubePoint(1, 0), path.Points.ToArray());
+    }
+
+    private sealed class UnitDistanceCostPolicy : IHexTraversalCostPolicy
+    {
+        public static UnitDistanceCostPolicy Instance { get; } = new UnitDistanceCostPolicy();
+
+        private UnitDistanceCostPolicy()
+        {
+        }
+
+        public double MinimumCostPerUnitLength => 1;
+
+        public double GetTraversalCost(double length, HexNavigationCell cell)
+        {
+            return length;
+        }
+    }
 }

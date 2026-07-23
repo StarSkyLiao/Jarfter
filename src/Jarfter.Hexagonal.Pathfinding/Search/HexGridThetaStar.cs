@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
@@ -31,6 +32,8 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="path">查找成功时得到的格心航点路径.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="costPolicy">计算主穿格移动成本的策略; 为 <see langword="null"/> 时使用默认地形倍率策略.</param>
+    /// <param name="requestOptions">本次格心搜索的节点、超时与取消限制; 为 <see langword="null"/> 时不限制.</param>
     /// <returns>当起终点均可作为节点且存在可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或快照最小地形倍率无效时抛出.</exception>
@@ -41,10 +44,17 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
         HexagonalCubePoint goal,
         HexagonalFootprint footprint,
         [NotNullWhen(true)] out HexGridPath? path,
-        double clearanceApothemScale = 0)
+        double clearanceApothemScale = 0,
+        IHexTraversalCostPolicy? costPolicy = null,
+        HexPathfindingRequestOptions? requestOptions = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(layout);
+
+        IHexTraversalCostPolicy actualCostPolicy = costPolicy ?? HexTraversalMultiplierCostPolicy.Instance;
+        ValidateCostPolicy(actualCostPolicy, nameof(costPolicy));
+        requestOptions?.Validate();
+        requestOptions?.CancellationToken.ThrowIfCancellationRequested();
 
         if (!double.IsFinite(snapshot.MinimumTraversalMultiplier) || snapshot.MinimumTraversalMultiplier < 1)
         {
@@ -59,7 +69,7 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
 
         if (start == goal)
         {
-            path = new HexGridPath([start], 0);
+            path = new HexGridPath([start], 0, snapshot.Version);
             return true;
         }
 
@@ -70,7 +80,9 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
         records.Add(start, new NodeRecord(0, default, false));
         openSet.Enqueue(
             new OpenNode(start, 0),
-            GetHeuristicCost(layout.GetCenter(start), goalCenter, snapshot.MinimumTraversalMultiplier));
+            GetHeuristicCost(layout.GetCenter(start), goalCenter, actualCostPolicy.MinimumCostPerUnitLength));
+        long startTimestamp = Stopwatch.GetTimestamp();
+        int expandedNodeCount = 0;
 
         while (openSet.TryDequeue(out OpenNode openNode, out _))
         {
@@ -81,11 +93,27 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
                 continue;
             }
 
+            requestOptions?.CancellationToken.ThrowIfCancellationRequested();
+
+            if (IsTimeoutExpired(requestOptions, startTimestamp))
+            {
+                path = null;
+                return false;
+            }
+
             if (openNode.Point == goal)
             {
-                path = ReconstructPath(records, goal, currentRecord.Cost);
+                path = ReconstructPath(records, goal, currentRecord.Cost, snapshot.Version);
                 return true;
             }
+
+            if (requestOptions is { MaximumExpandedNodeCount: > 0 } && expandedNodeCount >= requestOptions.MaximumExpandedNodeCount)
+            {
+                path = null;
+                return false;
+            }
+
+            expandedNodeCount++;
 
             for (int direction = 0; direction < 6; direction++)
             {
@@ -104,6 +132,7 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
                         neighbor,
                         footprint,
                         clearanceApothemScale,
+                        actualCostPolicy,
                         out HexagonalCubePoint parent,
                         out double neighborCost))
                 {
@@ -120,7 +149,7 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
                 double priority = neighborCost + GetHeuristicCost(
                     neighborCenter,
                     goalCenter,
-                    snapshot.MinimumTraversalMultiplier);
+                    actualCostPolicy.MinimumCostPerUnitLength);
                 openSet.Enqueue(new OpenNode(neighbor, neighborCost), priority);
             }
         }
@@ -138,6 +167,7 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
         HexagonalCubePoint neighbor,
         HexagonalFootprint footprint,
         double clearanceApothemScale,
+        IHexTraversalCostPolicy costPolicy,
         out HexagonalCubePoint parent,
         out double cost)
     {
@@ -158,7 +188,8 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
                 layout.GetCenter(neighbor),
                 footprint,
                 out double connectionCost,
-                clearanceApothemScale))
+                clearanceApothemScale,
+                costPolicy))
         {
             parent = connectionStart;
             cost = connectionStartCost + connectionCost;
@@ -173,7 +204,8 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
                 layout.GetCenter(neighbor),
                 footprint,
                 out connectionCost,
-                clearanceApothemScale))
+                clearanceApothemScale,
+                costPolicy))
         {
             parent = current;
             cost = currentRecord.Cost + connectionCost;
@@ -196,15 +228,16 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
     private static double GetHeuristicCost(
         HexagonalWorldPoint point,
         HexagonalWorldPoint goal,
-        double minimumTraversalMultiplier)
+        double minimumCostPerUnitLength)
     {
-        return point.DistanceTo(goal) * minimumTraversalMultiplier;
+        return point.DistanceTo(goal) * minimumCostPerUnitLength;
     }
 
     private static HexGridPath ReconstructPath(
         IReadOnlyDictionary<HexagonalCubePoint, NodeRecord> records,
         HexagonalCubePoint goal,
-        double cost)
+        double cost,
+        long navigationVersion)
     {
         List<HexagonalCubePoint> points = [];
         HexagonalCubePoint current = goal;
@@ -218,7 +251,22 @@ public sealed class HexGridThetaStar : IHexGridPathfinder
         }
 
         points.Reverse();
-        return new HexGridPath([.. points], cost);
+        return new HexGridPath([.. points], cost, navigationVersion);
+    }
+
+    private static void ValidateCostPolicy(IHexTraversalCostPolicy costPolicy, string parameterName)
+    {
+        if (!double.IsFinite(costPolicy.MinimumCostPerUnitLength) || costPolicy.MinimumCostPerUnitLength < 0)
+        {
+            throw new ArgumentOutOfRangeException(parameterName);
+        }
+    }
+
+    private static bool IsTimeoutExpired(HexPathfindingRequestOptions? requestOptions, long startTimestamp)
+    {
+        return requestOptions is not null
+            && requestOptions.Timeout != System.Threading.Timeout.InfiniteTimeSpan
+            && Stopwatch.GetElapsedTime(startTimestamp) >= requestOptions.Timeout;
     }
 
     private readonly record struct OpenNode(HexagonalCubePoint Point, double Cost);

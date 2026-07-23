@@ -11,6 +11,7 @@ namespace Jarfter.Net.Server.SignalR;
 /// </summary>
 /// <param name="clientManager">服务端连接注册表.</param>
 /// <param name="dispatcher">服务端消息分发器.</param>
+/// <param name="broadcaster">消息广播器.</param>
 public sealed class NetworkHub(IClientManager clientManager, INetMsgDispatcher dispatcher, IBroadcaster broadcaster) : Hub
 {
     /// <summary>

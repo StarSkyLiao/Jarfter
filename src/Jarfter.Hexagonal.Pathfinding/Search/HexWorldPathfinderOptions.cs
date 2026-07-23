@@ -1,3 +1,5 @@
+using Jarfter.Hexagonal.Pathfinding.Navigation;
+
 namespace Jarfter.Hexagonal.Pathfinding.Search;
 
 /// <summary>
@@ -17,4 +19,19 @@ public sealed class HexWorldPathfinderOptions
     /// 值越大越能从局部阻塞中恢复, 但会提高每个端点的固定枚举开销.
     /// </summary>
     public int AnchorSearchRadius { get; init; } = 1;
+
+    /// <summary>
+    /// 获取或初始化连续端点选择可见格心锚点的规则.
+    /// </summary>
+    public HexWorldPathAnchorSelection AnchorSelection { get; init; } = HexWorldPathAnchorSelection.LowestTraversalCost;
+
+    /// <summary>
+    /// 获取或初始化格心路径接入连续端点后的航点平滑方式.
+    /// </summary>
+    public HexPathSmoothingMode PathSmoothingMode { get; init; } = HexPathSmoothingMode.LineOfSight;
+
+    /// <summary>
+    /// 获取或初始化用于评估线路与格心搜索成本的策略.
+    /// </summary>
+    public IHexTraversalCostPolicy CostPolicy { get; init; } = HexTraversalMultiplierCostPolicy.Instance;
 }

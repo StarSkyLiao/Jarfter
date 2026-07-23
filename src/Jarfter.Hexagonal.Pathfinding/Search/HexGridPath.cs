@@ -12,14 +12,16 @@ public sealed class HexGridPath
     private readonly HexagonalCubePoint[] m_Points;
 
     /// <summary>
-    /// 使用已按起点到终点排序的坐标数组和累计成本初始化离散路径.
+    /// 使用已按起点到终点排序的坐标数组、累计成本和导航地图版本初始化离散路径.
     /// </summary>
     /// <param name="points">按起点到终点顺序排列的格心坐标数组.</param>
     /// <param name="cost">路径累计移动成本.</param>
-    internal HexGridPath(HexagonalCubePoint[] points, double cost)
+    /// <param name="navigationVersion">计算路径时使用的导航地图版本.</param>
+    internal HexGridPath(HexagonalCubePoint[] points, double cost, long navigationVersion)
     {
         m_Points = points;
         Cost = cost;
+        NavigationVersion = navigationVersion;
     }
 
     /// <summary>
@@ -31,4 +33,21 @@ public sealed class HexGridPath
     /// 获取路径的累计移动成本.
     /// </summary>
     public double Cost { get; }
+
+    /// <summary>
+    /// 获取计算此路径时使用的导航地图版本.
+    /// </summary>
+    public long NavigationVersion { get; }
+
+    /// <summary>
+    /// 判断此路径是否仍基于指定的导航地图版本.
+    /// </summary>
+    /// <param name="navigationVersion">要比较的当前导航地图版本.</param>
+    /// <returns>当版本与 <see cref="NavigationVersion"/> 相同时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="navigationVersion"/> 为负数时抛出.</exception>
+    public bool IsCurrent(long navigationVersion)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(navigationVersion);
+        return NavigationVersion == navigationVersion;
+    }
 }

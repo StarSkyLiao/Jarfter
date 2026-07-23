@@ -57,4 +57,26 @@ public sealed class NavigationSnapshotTests
         Assert.False(snapshot.TryGetCell(new HexagonalCubePoint(2, -1), out HexNavigationCell cell));
         Assert.Equal(default, cell);
     }
+
+    [Fact]
+    public void HexGridCentralNavigationMap_WhenCellChanges_ShouldCreateNewVersionedSnapshotWithoutMutatingOldSnapshot()
+    {
+        HexGridCentralNavigationMap map = new HexGridCentralNavigationMap(1);
+        HexagonalCubePoint point = new HexagonalCubePoint(1, 0);
+        HexGridCentralNavigationSnapshot firstSnapshot = map.CaptureSnapshot();
+
+        bool changed = map.TrySetCell(point, new HexNavigationCell(2, 0.8));
+        HexGridCentralNavigationSnapshot secondSnapshot = map.CaptureSnapshot();
+
+        Assert.True(changed);
+        Assert.Equal(0, firstSnapshot.Version);
+        Assert.Equal(1, map.Version);
+        Assert.Equal(1, secondSnapshot.Version);
+        Assert.True(firstSnapshot.TryGetCell(point, out HexNavigationCell firstCell));
+        Assert.True(secondSnapshot.TryGetCell(point, out HexNavigationCell secondCell));
+        Assert.Equal(HexNavigationCell.Default, firstCell);
+        Assert.Equal(new HexNavigationCell(2, 0.8), secondCell);
+        Assert.False(map.TrySetCell(point, new HexNavigationCell(2, 0.8)));
+        Assert.Equal(1, map.Version);
+    }
 }

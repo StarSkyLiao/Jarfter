@@ -38,4 +38,16 @@ public sealed class HexWorldPath
     /// 调用方可在跟随路径前或动态地图更新后与当前版本比较.
     /// </summary>
     public long NavigationVersion { get; }
+
+    /// <summary>
+    /// 判断此路径是否仍基于指定的导航地图版本.
+    /// </summary>
+    /// <param name="navigationVersion">要比较的当前导航地图版本.</param>
+    /// <returns>当版本与 <see cref="NavigationVersion"/> 相同时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="navigationVersion"/> 为负数时抛出.</exception>
+    public bool IsCurrent(long navigationVersion)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(navigationVersion);
+        return NavigationVersion == navigationVersion;
+    }
 }

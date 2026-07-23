@@ -29,6 +29,23 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
             throw new ArgumentOutOfRangeException(nameof(options), options.AnchorSearchRadius, "锚点搜索半径必须至少为一.");
         }
 
+        if (!Enum.IsDefined(options.AnchorSelection))
+        {
+            throw new ArgumentOutOfRangeException(nameof(options));
+        }
+
+        if (!Enum.IsDefined(options.PathSmoothingMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(options));
+        }
+
+        ArgumentNullException.ThrowIfNull(options.CostPolicy);
+
+        if (!double.IsFinite(options.CostPolicy.MinimumCostPerUnitLength) || options.CostPolicy.MinimumCostPerUnitLength < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options));
+        }
+
         GridPathfinder = gridPathfinder;
         Options = options;
     }
@@ -54,9 +71,11 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
     /// <param name="footprint">移动对象的固定朝向六边形足迹.</param>
     /// <param name="path">查找成功时得到的连续世界坐标路径.</param>
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
+    /// <param name="requestOptions">本次格心搜索的节点、超时与取消限制; 为 <see langword="null"/> 时不限制.</param>
     /// <returns>当起终点可通行且已装配的查找器返回可达路径时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="snapshot"/> 或 <paramref name="layout"/> 为 <see langword="null"/> 时抛出.</exception>
     /// <exception cref="ArgumentOutOfRangeException">当足迹、边距或坐标无效时抛出.</exception>
+    /// <exception cref="OperationCanceledException">当 <paramref name="requestOptions"/> 中的取消令牌被取消时抛出.</exception>
     public bool TryFindPath(
         IHexNavigationSnapshot snapshot,
         HexagonalLayout layout,
@@ -64,10 +83,13 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
         HexagonalWorldPoint goal,
         HexagonalFootprint footprint,
         [NotNullWhen(true)] out HexWorldPath? path,
-        double clearanceApothemScale = 0)
+        double clearanceApothemScale = 0,
+        HexPathfindingRequestOptions? requestOptions = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(layout);
+        requestOptions?.Validate();
+        requestOptions?.CancellationToken.ThrowIfCancellationRequested();
 
         if (HexLineOfSight.TryGetTraversalCost(
                 snapshot,
@@ -76,7 +98,8 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                 goal,
                 footprint,
                 out double directCost,
-                clearanceApothemScale))
+                clearanceApothemScale,
+                Options.CostPolicy))
         {
             path = new HexWorldPath([start, goal], directCost, snapshot.Version);
             return true;
@@ -88,16 +111,18 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                 start,
                 footprint,
                 clearanceApothemScale,
+                requestOptions,
                 out HexagonalCubePoint startAnchor,
-                out double startAnchorCost)
+                out _)
             || !TryGetAnchor(
                 snapshot,
                 layout,
                 goal,
                 footprint,
                 clearanceApothemScale,
+                requestOptions,
                 out HexagonalCubePoint goalAnchor,
-                out double goalAnchorCost)
+                out _)
             || !GridPathfinder.TryFindPath(
                 snapshot,
                 layout,
@@ -105,7 +130,9 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                 goalAnchor,
                 footprint,
                 out HexGridPath? gridPath,
-                clearanceApothemScale))
+                clearanceApothemScale,
+                Options.CostPolicy,
+                requestOptions))
         {
             path = null;
             return false;
@@ -119,7 +146,19 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
         }
 
         AddWaypoint(waypoints, goal);
-        path = new HexWorldPath([.. waypoints], startAnchorCost + gridPath.Cost + goalAnchorCost, snapshot.Version);
+
+        if (Options.PathSmoothingMode == HexPathSmoothingMode.LineOfSight)
+        {
+            waypoints = SmoothWaypoints(snapshot, layout, waypoints, footprint, clearanceApothemScale);
+        }
+
+        if (!TryGetPathCost(snapshot, layout, waypoints, footprint, clearanceApothemScale, out double cost))
+        {
+            path = null;
+            return false;
+        }
+
+        path = new HexWorldPath([.. waypoints], cost, snapshot.Version);
         return true;
     }
 
@@ -129,9 +168,12 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
         HexagonalWorldPoint position,
         HexagonalFootprint footprint,
         double clearanceApothemScale,
+        HexPathfindingRequestOptions? requestOptions,
         out HexagonalCubePoint anchor,
         out double cost)
     {
+        requestOptions?.CancellationToken.ThrowIfCancellationRequested();
+
         // 零长度查询会验证对象当前位置未与附近膨胀障碍重叠, 且位置位于快照范围内.
         if (!HexLineOfSight.TryGetTraversalCost(
                 snapshot,
@@ -140,7 +182,8 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                 position,
                 footprint,
                 out _,
-                clearanceApothemScale))
+                clearanceApothemScale,
+                Options.CostPolicy))
         {
             anchor = default;
             cost = 0;
@@ -150,10 +193,13 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
         HexagonalCubePoint nearest = layout.GetNearestPoint(position);
         double bestCost = double.PositiveInfinity;
         HexagonalCubePoint bestAnchor = default;
+        cost = 0;
 
         // 枚举配置范围内的候选格心, 在局部阻塞时为连续端点选择可见锚点.
         foreach (HexagonalCubePoint candidate in nearest.RangeIn(Options.AnchorSearchRadius))
         {
+            requestOptions?.CancellationToken.ThrowIfCancellationRequested();
+
             if (!snapshot.TryGetCell(candidate, out HexNavigationCell cell) || cell.HasObstacle)
             {
                 continue;
@@ -166,14 +212,27 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                     layout.GetCenter(candidate),
                     footprint,
                     out double candidateCost,
-                    clearanceApothemScale)
-                || candidateCost >= bestCost)
+                    clearanceApothemScale,
+                    Options.CostPolicy))
+            {
+                continue;
+            }
+
+            double candidateScore = Options.AnchorSelection switch
+            {
+                HexWorldPathAnchorSelection.LowestTraversalCost => candidateCost,
+                HexWorldPathAnchorSelection.NearestWorldDistance => position.DistanceTo(layout.GetCenter(candidate)),
+                _ => throw new InvalidOperationException()
+            };
+
+            if (candidateScore >= bestCost)
             {
                 continue;
             }
 
             bestAnchor = candidate;
-            bestCost = candidateCost;
+            bestCost = candidateScore;
+            cost = candidateCost;
         }
 
         if (double.IsPositiveInfinity(bestCost))
@@ -184,7 +243,73 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
         }
 
         anchor = bestAnchor;
-        cost = bestCost;
+        return true;
+    }
+
+    private List<HexagonalWorldPoint> SmoothWaypoints(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        List<HexagonalWorldPoint> waypoints,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale)
+    {
+        List<HexagonalWorldPoint> smoothedWaypoints = [waypoints[0]];
+        int currentIndex = 0;
+
+        while (currentIndex < waypoints.Count - 1)
+        {
+            int nextIndex = waypoints.Count - 1;
+
+            while (nextIndex > currentIndex + 1
+                && !HexLineOfSight.HasLineOfSight(
+                    snapshot,
+                    layout,
+                    waypoints[currentIndex],
+                    waypoints[nextIndex],
+                    footprint,
+                    clearanceApothemScale,
+                    Options.CostPolicy))
+            {
+                nextIndex--;
+            }
+
+            smoothedWaypoints.Add(waypoints[nextIndex]);
+            currentIndex = nextIndex;
+        }
+
+        return smoothedWaypoints;
+    }
+
+    private bool TryGetPathCost(
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        List<HexagonalWorldPoint> waypoints,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale,
+        out double cost)
+    {
+        double totalCost = 0;
+
+        for (int index = 1; index < waypoints.Count; index++)
+        {
+            if (!HexLineOfSight.TryGetTraversalCost(
+                    snapshot,
+                    layout,
+                    waypoints[index - 1],
+                    waypoints[index],
+                    footprint,
+                    out double segmentCost,
+                    clearanceApothemScale,
+                    Options.CostPolicy))
+            {
+                cost = 0;
+                return false;
+            }
+
+            totalCost += segmentCost;
+        }
+
+        cost = totalCost;
         return true;
     }
 

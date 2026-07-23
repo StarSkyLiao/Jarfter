@@ -36,6 +36,31 @@ public sealed class WorldPathfinderTests
     }
 
     [Fact]
+    public void TryFindPath_WhenCustomCostPolicyIsConfigured_ShouldUseItForDirectPathCost()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+        HexagonalWorldPoint start = layout.GetCenter(HexagonalCubePoint.Zero);
+        HexagonalWorldPoint goal = layout.GetCenter(new HexagonalCubePoint(1, 0));
+        HexWorldPathfinder pathfinder = new HexWorldPathfinder(
+            HexGridThetaStar.Instance,
+            new HexWorldPathfinderOptions { CostPolicy = DoubleDistanceCostPolicy.Instance });
+
+        bool found = pathfinder.TryFindPath(
+            snapshot,
+            layout,
+            start,
+            goal,
+            new HexagonalFootprint(0.25),
+            out HexWorldPath? path);
+
+        Assert.True(found);
+        Assert.NotNull(path);
+        Assert.Equal(4, path.Cost, 12);
+    }
+
+    [Fact]
     public void TryFindPath_WhenContinuousEndpointsAreBlockedByObstacle_ShouldReturnWaypointPath()
     {
         HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
@@ -101,12 +126,19 @@ public sealed class WorldPathfinderTests
     [Fact]
     public void Constructor_WhenOptionsAreConfigured_ShouldExposeConfiguredDependencies()
     {
-        HexWorldPathfinderOptions options = new HexWorldPathfinderOptions { AnchorSearchRadius = 2 };
+        HexWorldPathfinderOptions options = new HexWorldPathfinderOptions
+        {
+            AnchorSearchRadius = 2,
+            AnchorSelection = HexWorldPathAnchorSelection.NearestWorldDistance,
+            PathSmoothingMode = HexPathSmoothingMode.None
+        };
         HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance, options);
 
         Assert.Same(HexGridThetaStar.Instance, pathfinder.GridPathfinder);
         Assert.Same(options, pathfinder.Options);
         Assert.Equal(2, pathfinder.Options.AnchorSearchRadius);
+        Assert.Equal(HexWorldPathAnchorSelection.NearestWorldDistance, pathfinder.Options.AnchorSelection);
+        Assert.Equal(HexPathSmoothingMode.None, pathfinder.Options.PathSmoothingMode);
     }
 
     [Fact]
@@ -115,6 +147,45 @@ public sealed class WorldPathfinderTests
         HexWorldPathfinderOptions options = new HexWorldPathfinderOptions { AnchorSearchRadius = 0 };
 
         Assert.Throws<ArgumentOutOfRangeException>(() => new HexWorldPathfinder(HexGridThetaStar.Instance, options));
+    }
+
+    [Fact]
+    public void TryFindPath_WhenMapVersionChanges_ShouldMarkPriorPathAsOutdated()
+    {
+        HexGridCentralNavigationMap map = new HexGridCentralNavigationMap(3);
+        HexGridCentralNavigationSnapshot firstSnapshot = map.CaptureSnapshot();
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+        HexagonalWorldPoint start = layout.GetCenter(HexagonalCubePoint.Zero);
+        HexagonalWorldPoint goal = layout.GetCenter(new HexagonalCubePoint(3, 0));
+        HexWorldPathfinder pathfinder = new HexWorldPathfinder(HexGridThetaStar.Instance);
+
+        bool found = pathfinder.TryFindPath(
+            firstSnapshot,
+            layout,
+            start,
+            goal,
+            new HexagonalFootprint(0.25),
+            out HexWorldPath? path);
+
+        Assert.True(found);
+        Assert.NotNull(path);
+        Assert.True(path.IsCurrent(map.Version));
+        Assert.True(map.TrySetCell(new HexagonalCubePoint(1, 0), new HexNavigationCell(1, 1)));
+        Assert.False(path.IsCurrent(map.Version));
+
+        HexGridCentralNavigationSnapshot secondSnapshot = map.CaptureSnapshot();
+        Assert.True(HexLineOfSight.HasLineOfSight(
+            firstSnapshot,
+            layout,
+            start,
+            goal,
+            new HexagonalFootprint(0.25)));
+        Assert.False(HexLineOfSight.HasLineOfSight(
+            secondSnapshot,
+            layout,
+            start,
+            goal,
+            new HexagonalFootprint(0.25)));
     }
 
     private sealed class RecordingGridPathfinder(IHexGridPathfinder inner) : IHexGridPathfinder
@@ -128,7 +199,9 @@ public sealed class WorldPathfinderTests
             HexagonalCubePoint goal,
             HexagonalFootprint footprint,
             [NotNullWhen(true)] out HexGridPath? path,
-            double clearanceApothemScale = 0)
+            double clearanceApothemScale = 0,
+            IHexTraversalCostPolicy? costPolicy = null,
+            HexPathfindingRequestOptions? requestOptions = null)
         {
             WasUsed = true;
             return inner.TryFindPath(
@@ -138,7 +211,25 @@ public sealed class WorldPathfinderTests
                 goal,
                 footprint,
                 out path,
-                clearanceApothemScale);
+                clearanceApothemScale,
+                costPolicy,
+                requestOptions);
+        }
+    }
+
+    private sealed class DoubleDistanceCostPolicy : IHexTraversalCostPolicy
+    {
+        public static DoubleDistanceCostPolicy Instance { get; } = new DoubleDistanceCostPolicy();
+
+        private DoubleDistanceCostPolicy()
+        {
+        }
+
+        public double MinimumCostPerUnitLength => 2;
+
+        public double GetTraversalCost(double length, HexNavigationCell cell)
+        {
+            return length * 2;
         }
     }
 }
