@@ -14,13 +14,9 @@ public sealed class HexGridPathfindingWorkspace
     private readonly int[] m_Parents;
     private readonly int[] m_RecordGenerations;
     private readonly int[] m_ClosedGenerations;
-    private readonly int[] m_OpenGenerations;
-    private readonly int[] m_HeapPositions;
-    private readonly int[] m_HeapNodes;
-    private readonly double[] m_HeapPriorities;
+    private readonly HexGridIndexedPriorityQueue m_OpenSet;
     private readonly Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry> m_LineOfSightCache;
     private int m_Generation;
-    private int m_HeapCount;
 
     /// <summary>
     /// 为指定烘焙地图创建可复用的搜索工作区.
@@ -36,10 +32,7 @@ public sealed class HexGridPathfindingWorkspace
         m_Parents = new int[bake.Count];
         m_RecordGenerations = new int[bake.Count];
         m_ClosedGenerations = new int[bake.Count];
-        m_OpenGenerations = new int[bake.Count];
-        m_HeapPositions = new int[bake.Count];
-        m_HeapNodes = new int[bake.Count];
-        m_HeapPriorities = new double[bake.Count];
+        m_OpenSet = new HexGridIndexedPriorityQueue(bake.Count);
         m_LineOfSightCache = new Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>();
     }
 
@@ -57,7 +50,7 @@ public sealed class HexGridPathfindingWorkspace
         {
             Array.Clear(m_RecordGenerations);
             Array.Clear(m_ClosedGenerations);
-            Array.Clear(m_OpenGenerations);
+            m_OpenSet.ClearGenerations();
             m_Generation = 1;
         }
         else
@@ -65,7 +58,7 @@ public sealed class HexGridPathfindingWorkspace
             m_Generation++;
         }
 
-        m_HeapCount = 0;
+        m_OpenSet.Reset();
         UsesLineOfSightCache = usesLineOfSightCache;
 
         if (usesLineOfSightCache && !preserveLineOfSightCache)
@@ -104,44 +97,12 @@ public sealed class HexGridPathfindingWorkspace
 
     internal void EnqueueOrDecreasePriority(int index, double priority)
     {
-        if (m_OpenGenerations[index] == m_Generation)
-        {
-            int heapIndex = m_HeapPositions[index];
-            m_HeapPriorities[heapIndex] = priority;
-            BubbleUp(heapIndex);
-            return;
-        }
-
-        int newHeapIndex = m_HeapCount++;
-        m_OpenGenerations[index] = m_Generation;
-        m_HeapNodes[newHeapIndex] = index;
-        m_HeapPriorities[newHeapIndex] = priority;
-        m_HeapPositions[index] = newHeapIndex;
-        BubbleUp(newHeapIndex);
+        m_OpenSet.EnqueueOrDecreasePriority(index, priority, m_Generation);
     }
 
     internal bool TryDequeue(out int index)
     {
-        if (m_HeapCount == 0)
-        {
-            index = -1;
-            return false;
-        }
-
-        index = m_HeapNodes[0];
-        m_OpenGenerations[index] = 0;
-        m_HeapPositions[index] = -1;
-        m_HeapCount--;
-
-        if (m_HeapCount > 0)
-        {
-            m_HeapNodes[0] = m_HeapNodes[m_HeapCount];
-            m_HeapPriorities[0] = m_HeapPriorities[m_HeapCount];
-            m_HeapPositions[m_HeapNodes[0]] = 0;
-            BubbleDown(0);
-        }
-
-        return true;
+        return m_OpenSet.TryDequeue(out index);
     }
 
     internal bool TryGetLineOfSightCache(
@@ -173,56 +134,6 @@ public sealed class HexGridPathfindingWorkspace
         {
             m_LineOfSightCache.Add(new LineOfSightCacheKey(start, end), new LineOfSightCacheEntry(isTraversable, cost));
         }
-    }
-
-    private void BubbleUp(int heapIndex)
-    {
-        while (heapIndex > 0)
-        {
-            int parentIndex = (heapIndex - 1) / 2;
-
-            if (m_HeapPriorities[parentIndex] <= m_HeapPriorities[heapIndex])
-            {
-                return;
-            }
-
-            SwapHeapEntries(parentIndex, heapIndex);
-            heapIndex = parentIndex;
-        }
-    }
-
-    private void BubbleDown(int heapIndex)
-    {
-        while (true)
-        {
-            int leftChildIndex = heapIndex * 2 + 1;
-            if (leftChildIndex >= m_HeapCount)
-            {
-                return;
-            }
-
-            int rightChildIndex = leftChildIndex + 1;
-            int smallestChildIndex = rightChildIndex < m_HeapCount
-                && m_HeapPriorities[rightChildIndex] < m_HeapPriorities[leftChildIndex]
-                ? rightChildIndex
-                : leftChildIndex;
-
-            if (m_HeapPriorities[heapIndex] <= m_HeapPriorities[smallestChildIndex])
-            {
-                return;
-            }
-
-            SwapHeapEntries(heapIndex, smallestChildIndex);
-            heapIndex = smallestChildIndex;
-        }
-    }
-
-    private void SwapHeapEntries(int leftIndex, int rightIndex)
-    {
-        (m_HeapNodes[leftIndex], m_HeapNodes[rightIndex]) = (m_HeapNodes[rightIndex], m_HeapNodes[leftIndex]);
-        (m_HeapPriorities[leftIndex], m_HeapPriorities[rightIndex]) = (m_HeapPriorities[rightIndex], m_HeapPriorities[leftIndex]);
-        m_HeapPositions[m_HeapNodes[leftIndex]] = leftIndex;
-        m_HeapPositions[m_HeapNodes[rightIndex]] = rightIndex;
     }
 
     private readonly record struct LineOfSightCacheKey(HexagonalCubePoint Start, HexagonalCubePoint End);

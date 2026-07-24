@@ -1,6 +1,4 @@
-using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.Pathfinding.Geometry;
 
 namespace Jarfter.Hexagonal.Pathfinding.Navigation;
 
@@ -133,100 +131,17 @@ public static class HexLineOfSight
             throw new ArgumentOutOfRangeException(nameof(snapshot));
         }
 
-        int queryRadius = GetQueryRadius(
-            snapshot.MaximumObstacleApothemScale,
-            footprint.ApothemScale,
-            clearanceApothemScale);
-        double segmentLength = start.DistanceTo(end);
-        double totalCost = 0;
-
-        foreach (HexagonalSegmentCell traversedCell in HexNavigationGeometry.TraverseSegment(layout, start, end))
-        {
-            metrics?.AddTraversedCell();
-
-            if (!snapshot.TryGetCell(traversedCell.Point, out HexNavigationCell traversedCellData))
-            {
-                cost = 0;
-                return false;
-            }
-
-            if (useObstacleChunkAcceleration
-                && snapshot is HexGridCentralNavigationSnapshot centralSnapshot
-                && !centralSnapshot.HasObstacleInChunkRange(
-                    traversedCell.Point.Q - queryRadius,
-                    traversedCell.Point.Q + queryRadius,
-                    traversedCell.Point.R - queryRadius,
-                    traversedCell.Point.R + queryRadius))
-            {
-                // 块范围完全为空时, 六边形查询范围内也不可能存在障碍.
-                metrics?.AddObstacleFreeChunkRangeSkip();
-                double emptySectionLength = segmentLength * (traversedCell.EndFraction - traversedCell.StartFraction);
-                double emptySectionCost = actualCostPolicy.GetTraversalCost(emptySectionLength, traversedCellData);
-
-                if (!double.IsFinite(emptySectionCost) || emptySectionCost < 0)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(costPolicy));
-                }
-
-                totalCost += emptySectionCost;
-                continue;
-            }
-
-            foreach (HexagonalCubePoint candidate in traversedCell.Point.RangeIn(queryRadius))
-            {
-                metrics?.AddNearbyCellQuery();
-
-                if (!snapshot.TryGetCell(candidate, out HexNavigationCell cell) || !cell.HasObstacle)
-                {
-                    continue;
-                }
-
-                metrics?.AddObstacleIntersectionTest();
-
-                if (HexNavigationGeometry.SegmentIntersectsInflatedHexagonUnchecked(
-                        layout,
-                        start,
-                        end,
-                        candidate,
-                        cell.ObstacleApothemScale,
-                        footprint.ApothemScale,
-                        clearanceApothemScale))
-                {
-                    cost = 0;
-                    return false;
-                }
-            }
-
-            double sectionLength = segmentLength * (traversedCell.EndFraction - traversedCell.StartFraction);
-            double sectionCost = actualCostPolicy.GetTraversalCost(sectionLength, traversedCellData);
-
-            if (!double.IsFinite(sectionCost) || sectionCost < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(costPolicy));
-            }
-
-            totalCost += sectionCost;
-        }
-
-        if (!double.IsFinite(totalCost))
-        {
-            throw new ArgumentOutOfRangeException(nameof(costPolicy));
-        }
-
-        cost = totalCost;
-        return true;
+        return HexLineOfSightTraversalEvaluator.TryGetTraversalCost(
+            snapshot,
+            layout,
+            start,
+            end,
+            footprint,
+            out cost,
+            clearanceApothemScale,
+            actualCostPolicy,
+            metrics,
+            useObstacleChunkAcceleration);
     }
 
-    private static int GetQueryRadius(
-        double maximumObstacleApothemScale,
-        double footprintApothemScale,
-        double clearanceApothemScale)
-    {
-        double effectiveApothemScale = maximumObstacleApothemScale
-            + footprintApothemScale
-            + clearanceApothemScale;
-        double radius = Math.Ceiling(2 * (1 + effectiveApothemScale) / 3);
-
-        return checked((int)Math.Max(1, radius));
-    }
 }

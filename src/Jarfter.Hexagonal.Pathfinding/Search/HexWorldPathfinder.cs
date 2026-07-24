@@ -142,7 +142,8 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
             return new HexWorldPath([start, goal], directCost, snapshot.Version);
         }
 
-        if (!TryGetAnchor(
+        if (!HexWorldPathAnchorSelector.TryGetAnchor(
+                Options,
                 snapshot,
                 layout,
                 start,
@@ -151,7 +152,8 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
                 requestOptions,
                 out HexagonalCubePoint startAnchor,
                 out _)
-            || !TryGetAnchor(
+            || !HexWorldPathAnchorSelector.TryGetAnchor(
+                Options,
                 snapshot,
                 layout,
                 goal,
@@ -190,166 +192,28 @@ public sealed class HexWorldPathfinder : IHexWorldPathfinder
 
         if (Options.PathSmoothingMode == HexPathSmoothingMode.LineOfSight)
         {
-            waypoints = SmoothWaypoints(snapshot, layout, waypoints, footprint, clearanceApothemScale);
+            waypoints = HexWorldPathPostProcessor.SmoothWaypoints(
+                snapshot,
+                layout,
+                waypoints,
+                footprint,
+                clearanceApothemScale,
+                Options.CostPolicy);
         }
 
-        if (!TryGetPathCost(snapshot, layout, waypoints, footprint, clearanceApothemScale, out double cost))
+        if (!HexWorldPathPostProcessor.TryGetPathCost(
+                snapshot,
+                layout,
+                waypoints,
+                footprint,
+                clearanceApothemScale,
+                Options.CostPolicy,
+                out double cost))
         {
             return null;
         }
 
         return new HexWorldPath([.. waypoints], cost, snapshot.Version);
-    }
-
-    private bool TryGetAnchor(
-        IHexNavigationSnapshot snapshot,
-        HexagonalLayout layout,
-        HexagonalWorldPoint position,
-        HexagonalFootprint footprint,
-        double clearanceApothemScale,
-        HexPathfindingRequestOptions? requestOptions,
-        out HexagonalCubePoint anchor,
-        out double cost)
-    {
-        requestOptions?.CancellationToken.ThrowIfCancellationRequested();
-
-        // 零长度查询会验证对象当前位置未与附近膨胀障碍重叠, 且位置位于快照范围内.
-        if (!HexLineOfSight.TryGetTraversalCost(
-                snapshot,
-                layout,
-                position,
-                position,
-                footprint,
-                out _,
-                clearanceApothemScale,
-                Options.CostPolicy))
-        {
-            anchor = default;
-            cost = 0;
-            return false;
-        }
-
-        HexagonalCubePoint nearest = layout.GetNearestPoint(position);
-        double bestCost = double.PositiveInfinity;
-        HexagonalCubePoint bestAnchor = default;
-        cost = 0;
-
-        // 枚举配置范围内的候选格心, 在局部阻塞时为连续端点选择可见锚点.
-        foreach (HexagonalCubePoint candidate in nearest.RangeIn(Options.AnchorSearchRadius))
-        {
-            requestOptions?.CancellationToken.ThrowIfCancellationRequested();
-
-            if (!snapshot.TryGetCell(candidate, out HexNavigationCell cell) || cell.HasObstacle)
-            {
-                continue;
-            }
-
-            if (!HexLineOfSight.TryGetTraversalCost(
-                    snapshot,
-                    layout,
-                    position,
-                    layout.GetCenter(candidate),
-                    footprint,
-                    out double candidateCost,
-                    clearanceApothemScale,
-                    Options.CostPolicy))
-            {
-                continue;
-            }
-
-            double candidateScore = Options.AnchorSelection switch
-            {
-                HexWorldPathAnchorSelection.LowestTraversalCost => candidateCost,
-                HexWorldPathAnchorSelection.NearestWorldDistance => position.DistanceTo(layout.GetCenter(candidate)),
-                _ => throw new InvalidOperationException()
-            };
-
-            if (candidateScore >= bestCost)
-            {
-                continue;
-            }
-
-            bestAnchor = candidate;
-            bestCost = candidateScore;
-            cost = candidateCost;
-        }
-
-        if (double.IsPositiveInfinity(bestCost))
-        {
-            anchor = default;
-            cost = 0;
-            return false;
-        }
-
-        anchor = bestAnchor;
-        return true;
-    }
-
-    private List<HexagonalWorldPoint> SmoothWaypoints(
-        IHexNavigationSnapshot snapshot,
-        HexagonalLayout layout,
-        List<HexagonalWorldPoint> waypoints,
-        HexagonalFootprint footprint,
-        double clearanceApothemScale)
-    {
-        List<HexagonalWorldPoint> smoothedWaypoints = [waypoints[0]];
-        int currentIndex = 0;
-
-        while (currentIndex < waypoints.Count - 1)
-        {
-            int nextIndex = waypoints.Count - 1;
-
-            while (nextIndex > currentIndex + 1
-                && !HexLineOfSight.HasLineOfSight(
-                    snapshot,
-                    layout,
-                    waypoints[currentIndex],
-                    waypoints[nextIndex],
-                    footprint,
-                    clearanceApothemScale,
-                    Options.CostPolicy))
-            {
-                nextIndex--;
-            }
-
-            smoothedWaypoints.Add(waypoints[nextIndex]);
-            currentIndex = nextIndex;
-        }
-
-        return smoothedWaypoints;
-    }
-
-    private bool TryGetPathCost(
-        IHexNavigationSnapshot snapshot,
-        HexagonalLayout layout,
-        List<HexagonalWorldPoint> waypoints,
-        HexagonalFootprint footprint,
-        double clearanceApothemScale,
-        out double cost)
-    {
-        double totalCost = 0;
-
-        for (int index = 1; index < waypoints.Count; index++)
-        {
-            if (!HexLineOfSight.TryGetTraversalCost(
-                    snapshot,
-                    layout,
-                    waypoints[index - 1],
-                    waypoints[index],
-                    footprint,
-                    out double segmentCost,
-                    clearanceApothemScale,
-                    Options.CostPolicy))
-            {
-                cost = 0;
-                return false;
-            }
-
-            totalCost += segmentCost;
-        }
-
-        cost = totalCost;
-        return true;
     }
 
     private static void AddWaypoint(List<HexagonalWorldPoint> waypoints, HexagonalWorldPoint point)
