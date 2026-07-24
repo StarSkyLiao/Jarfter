@@ -1,8 +1,8 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 
@@ -11,7 +11,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenDirectLineIsTraversable_ShouldUseStartAndGoalAsWaypoints()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
         HexagonalCubePoint goal = new HexagonalCubePoint(2, 1);
@@ -42,7 +42,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenDirectLineIsBlocked_ShouldReturnCollisionFreeWaypointSegments()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
@@ -74,7 +74,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenEndpointHasObstacle_ShouldReturnNull()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
@@ -91,7 +91,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenExpandedNodeBudgetIsExhausted_ShouldReturnNull()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
         HexGridPath? path = HexGridThetaStar.Instance.FindPath(
@@ -108,7 +108,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenRequestIsCancelled_ShouldThrow()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         using CancellationTokenSource cancellationSource = new CancellationTokenSource();
         cancellationSource.Cancel();
@@ -128,7 +128,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenSearchTimesOut_ShouldReturnNull()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
         HexGridPath? path = HexGridThetaStar.Instance.FindPath(
@@ -145,7 +145,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenStatisticsAreRequested_ShouldAttachSearchWorkload()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
         HexGridPath? path = HexGridThetaStar.Instance.FindPath(
@@ -170,7 +170,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenLineOfSightCacheIsEnabled_ShouldPreservePath()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
@@ -209,7 +209,7 @@ public sealed class GridThetaStarTests
     [Fact]
     public void FindPath_WhenObstacleChunkAccelerationIsDisabled_ShouldPreservePath()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);

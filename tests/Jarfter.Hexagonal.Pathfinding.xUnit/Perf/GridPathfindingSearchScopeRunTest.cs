@@ -1,9 +1,9 @@
 using Jarfter.Core.Diagnostics;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit.Perf;
 
@@ -73,7 +73,7 @@ public static class GridPathfindingSearchScopeRunTest
 
     private static HexGridCentralNavigationSnapshot CreateSnapshot()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(MapRadius);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(MapRadius);
 
         // 直线路径被短墙阻挡, 但在起终点附近即可完成绕行.
         for (int r = -1; r <= 1; r++)

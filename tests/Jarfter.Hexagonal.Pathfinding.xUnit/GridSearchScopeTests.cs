@@ -1,8 +1,8 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 
@@ -22,7 +22,7 @@ public sealed class GridSearchScopeTests
     [Fact]
     public void FindPath_WhenFirstScopeCannotDetour_ShouldFallBackToNextScope()
     {
-        HexGridCentralProvider<HexNavigationCell> map = CreateBlockedShortRouteMap();
+        HexGridCentral<HexNavigationCell> map = CreateBlockedShortRouteMap();
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         RecordingScopeStrategy strategy = new RecordingScopeStrategy(2, null);
 
@@ -47,7 +47,7 @@ public sealed class GridSearchScopeTests
     [Fact]
     public void FindPath_WhenSearchScopeIsEnabled_ShouldApplyNodeBudgetAcrossAllAttempts()
     {
-        HexGridCentralProvider<HexNavigationCell> map = CreateBlockedShortRouteMap();
+        HexGridCentral<HexNavigationCell> map = CreateBlockedShortRouteMap();
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         RecordingScopeStrategy strategy = new RecordingScopeStrategy(2, null);
 
@@ -70,9 +70,9 @@ public sealed class GridSearchScopeTests
     [Fact]
     public void FindPathWithWorkspace_WhenFirstScopeCannotDetour_ShouldFallBackToNextScope()
     {
-        HexGridCentralProvider<HexNavigationCell> map = CreateBlockedShortRouteMap();
+        HexGridCentral<HexNavigationCell> map = CreateBlockedShortRouteMap();
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
-        HexGridPathfindingWorkspace workspace = new HexGridPathfindingWorkspace(snapshot.Bake);
+        HexGridPathfindingWorkspace workspace = new HexGridPathfindingWorkspace(snapshot);
         RecordingScopeStrategy strategy = new RecordingScopeStrategy(2, null);
 
         HexGridPath? path = HexGridAStar.Instance.FindPath(
@@ -89,9 +89,9 @@ public sealed class GridSearchScopeTests
         Assert.DoesNotContain(new HexagonalCubePoint(1, 0), path.Points.ToArray());
     }
 
-    private static HexGridCentralProvider<HexNavigationCell> CreateBlockedShortRouteMap()
+    private static HexGridCentral<HexNavigationCell> CreateBlockedShortRouteMap()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
         return map;
     }

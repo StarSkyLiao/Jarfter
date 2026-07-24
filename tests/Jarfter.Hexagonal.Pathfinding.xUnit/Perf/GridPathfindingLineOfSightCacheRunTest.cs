@@ -1,5 +1,5 @@
 using Jarfter.Core.Diagnostics;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit.Perf;
 

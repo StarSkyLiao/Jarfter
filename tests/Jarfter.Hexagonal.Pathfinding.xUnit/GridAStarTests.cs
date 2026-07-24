@@ -1,8 +1,8 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 
@@ -11,7 +11,7 @@ public sealed class GridAStarTests
     [Fact]
     public void FindPath_WhenStraightRouteIsTraversable_ShouldReturnLowestCostPath()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
         HexGridPath? path = HexGridAStar.Instance.FindPath(
@@ -36,7 +36,7 @@ public sealed class GridAStarTests
     [Fact]
     public void FindPath_WhenStraightRouteContainsObstacle_ShouldFindDetour()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
@@ -60,7 +60,7 @@ public sealed class GridAStarTests
     [Fact]
     public void FindPath_WhenDirectTerrainIsExpensive_ShouldPreferLowerCostDetour()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(2);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
@@ -79,7 +79,7 @@ public sealed class GridAStarTests
     [Fact]
     public void FindPath_WhenEndpointHasObstacle_ShouldReturnNull()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
@@ -96,7 +96,7 @@ public sealed class GridAStarTests
     [Fact]
     public void FindPath_WhenCustomCostPolicyIgnoresTerrain_ShouldUseShortestRoute()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(2);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 7);
 

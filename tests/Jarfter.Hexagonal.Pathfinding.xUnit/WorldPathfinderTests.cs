@@ -1,9 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
+using Jarfter.Hexagonal.Pathfinding.World;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 
@@ -12,7 +13,7 @@ public sealed class WorldPathfinderTests
     [Fact]
     public void FindPath_WhenContinuousEndpointsHaveDirectLineOfSight_ShouldReturnSingleSegment()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 9);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
         HexagonalWorldPoint start = new HexagonalWorldPoint(-0.2, 0.1);
@@ -36,7 +37,7 @@ public sealed class WorldPathfinderTests
     [Fact]
     public void FindPath_WhenCustomCostPolicyIsConfigured_ShouldUseItForDirectPathCost()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
         HexagonalWorldPoint start = layout.GetCenter(HexagonalCubePoint.Zero);
@@ -59,7 +60,7 @@ public sealed class WorldPathfinderTests
     [Fact]
     public void FindPath_WhenContinuousEndpointsAreBlockedByObstacle_ShouldReturnWaypointPath()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
@@ -95,7 +96,7 @@ public sealed class WorldPathfinderTests
     [Fact]
     public void FindPath_WhenCustomGridPathfinderIsSupplied_ShouldUseItForAnchoredSearch()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(3);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);

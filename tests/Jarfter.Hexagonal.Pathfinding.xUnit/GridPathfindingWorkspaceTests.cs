@@ -1,41 +1,31 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 
 public sealed class GridPathfindingWorkspaceTests
 {
     [Fact]
-    public void CaptureSnapshot_WhenMapIsUnchangedOrChanged_ShouldReuseBakedTopology()
+    public void CaptureSnapshot_WhenMapIsUnchangedOrChanged_ShouldPermitWorkspaceReuse()
     {
         HexGridCentralNavigationMap map = new HexGridCentralNavigationMap(3);
         HexGridCentralNavigationSnapshot firstSnapshot = map.CaptureSnapshot();
+        HexGridPathfindingWorkspace workspace = new HexGridPathfindingWorkspace(firstSnapshot);
 
         map.TrySetCell(new HexagonalCubePoint(1, 0), new HexNavigationCell(2, 0.5));
         HexGridCentralNavigationSnapshot secondSnapshot = map.CaptureSnapshot();
 
-        Assert.Same(firstSnapshot.Bake, secondSnapshot.Bake);
-        Assert.Equal(37, firstSnapshot.Bake.Count);
-        Assert.Equal(8, HexGridCentralNavigationBake.ObstacleChunkSize);
-        Assert.Equal(-1, firstSnapshot.Bake.ObstacleChunkMinimumQ);
-        Assert.Equal(2, firstSnapshot.Bake.ObstacleChunkCountQ);
-        HexGridCentralNavigationBake chunkBoundaryBake = new HexGridCentralNavigationBake(8);
-        Assert.Equal(-1, chunkBoundaryBake.ObstacleChunkMinimumQ);
-        Assert.Equal(3, chunkBoundaryBake.ObstacleChunkCountQ);
-        Assert.True(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(1, 0), out int index));
-        Assert.Equal(new HexagonalCubePoint(1, 0), firstSnapshot.Bake.GetPoint(index));
-        Assert.True(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(3, 0), out int boundaryIndex));
-        Assert.Equal(-1, firstSnapshot.Bake.GetNeighborIndex(boundaryIndex, 0));
-        Assert.False(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(3, 1), out _));
+        HexGridPath? path = HexGridAStar.Instance.FindPath(
+            secondSnapshot,
+            workspace,
+            new HexagonalLayout(HexagonalOrientation.PointyTop, 1),
+            HexagonalCubePoint.Zero,
+            new HexagonalCubePoint(3, 0),
+            new HexagonalFootprint(0.25));
 
-        for (int expectedIndex = 0; expectedIndex < firstSnapshot.Bake.Count; expectedIndex++)
-        {
-            HexagonalCubePoint point = firstSnapshot.Bake.GetPoint(expectedIndex);
-            Assert.True(firstSnapshot.Bake.TryGetIndex(point, out int actualIndex));
-            Assert.Equal(expectedIndex, actualIndex);
-        }
+        Assert.NotNull(path);
     }
 
     [Fact]
@@ -44,7 +34,7 @@ public sealed class GridPathfindingWorkspaceTests
         HexGridCentralNavigationMap map = new HexGridCentralNavigationMap(3);
         map.TrySetCell(new HexagonalCubePoint(1, 0), new HexNavigationCell(1, 1));
         HexGridCentralNavigationSnapshot firstSnapshot = map.CaptureSnapshot();
-        HexGridPathfindingWorkspace workspace = new HexGridPathfindingWorkspace(firstSnapshot.Bake);
+        HexGridPathfindingWorkspace workspace = new HexGridPathfindingWorkspace(firstSnapshot);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
         HexagonalFootprint footprint = new HexagonalFootprint(0.25);
         HexagonalCubePoint goal = new HexagonalCubePoint(3, 0);
@@ -103,7 +93,7 @@ public sealed class GridPathfindingWorkspaceTests
     {
         HexGridCentralNavigationMap firstMap = new HexGridCentralNavigationMap(2);
         HexGridCentralNavigationMap secondMap = new HexGridCentralNavigationMap(2);
-        HexGridPathfindingWorkspace workspace = new HexGridPathfindingWorkspace(firstMap.CaptureSnapshot().Bake);
+        HexGridPathfindingWorkspace workspace = new HexGridPathfindingWorkspace(firstMap.CaptureSnapshot());
 
         Assert.Throws<ArgumentException>(() => HexGridAStar.Instance.FindPath(
             secondMap.CaptureSnapshot(),
@@ -117,8 +107,8 @@ public sealed class GridPathfindingWorkspaceTests
     [Fact]
     public void HexGridPathfindingWorkspacePool_WhenRentingAndReturning_ShouldReuseExclusiveWorkspace()
     {
-        HexGridCentralNavigationBake bake = new HexGridCentralNavigationBake(3);
-        HexGridPathfindingWorkspacePool pool = new HexGridPathfindingWorkspacePool(bake, 1);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationMap(3).CaptureSnapshot();
+        HexGridPathfindingWorkspacePool pool = new HexGridPathfindingWorkspacePool(snapshot, 1);
         HexGridPathfindingWorkspaceLease firstLease = pool.Rent();
         HexGridPathfindingWorkspace firstWorkspace = firstLease.Workspace;
 
@@ -128,7 +118,6 @@ public sealed class GridPathfindingWorkspaceTests
         using HexGridPathfindingWorkspaceLease reusedLease = pool.Rent();
         using HexGridPathfindingWorkspaceLease concurrentLease = pool.Rent();
 
-        Assert.Same(bake, reusedLease.Workspace.Bake);
         Assert.Same(firstWorkspace, reusedLease.Workspace);
         Assert.NotSame(reusedLease.Workspace, concurrentLease.Workspace);
     }

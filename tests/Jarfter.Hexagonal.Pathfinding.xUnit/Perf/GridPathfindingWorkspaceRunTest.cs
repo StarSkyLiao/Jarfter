@@ -1,5 +1,5 @@
 using Jarfter.Core.Diagnostics;
-using Jarfter.Hexagonal.Pathfinding.Search;
+using Jarfter.Hexagonal.Pathfinding.Grid;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit.Perf;
 
@@ -9,8 +9,8 @@ namespace Jarfter.Hexagonal.Pathfinding.xUnit.Perf;
 /// </summary>
 public static class GridPathfindingWorkspaceRunTest
 {
-    private static readonly HexGridPathfindingWorkspace s_AStarWorkspace = new HexGridPathfindingWorkspace(GridPathfindingBenchmarkScenario.Snapshot.Bake);
-    private static readonly HexGridPathfindingWorkspace s_ThetaStarWorkspace = new HexGridPathfindingWorkspace(GridPathfindingBenchmarkScenario.Snapshot.Bake);
+    private static readonly HexGridPathfindingWorkspace s_AStarWorkspace = new HexGridPathfindingWorkspace(GridPathfindingBenchmarkScenario.Snapshot);
+    private static readonly HexGridPathfindingWorkspace s_ThetaStarWorkspace = new HexGridPathfindingWorkspace(GridPathfindingBenchmarkScenario.Snapshot);
 
     /// <summary>
     /// 运行 A* 与 Theta* 在无状态和复用工作区模式下的时间和托管内存分配对比.

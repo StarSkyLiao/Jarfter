@@ -1,6 +1,6 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
@@ -10,7 +10,7 @@ public sealed class LineOfSightTests
     [Fact]
     public void HasLineOfSight_WhenSegmentCrossesInflatedObstacle_ShouldReturnFalse()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(2);
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
@@ -29,7 +29,7 @@ public sealed class LineOfSightTests
     [Fact]
     public void HasLineOfSight_WhenSegmentAvoidsAllObstacles_ShouldReturnTrue()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(2);
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
@@ -47,7 +47,7 @@ public sealed class LineOfSightTests
     [Fact]
     public void HasLineOfSight_WhenObstacleIsBesideTraversedMainCell_ShouldCheckItConservatively()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(2);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(2);
         map[HexagonalCubePoint.Zero] = new HexNavigationCell(1, 0.5);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
@@ -66,7 +66,7 @@ public sealed class LineOfSightTests
     [Fact]
     public void TryGetTraversalCost_WhenLineCrossesTerrain_ShouldAccumulateLengthWeightedCost()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
@@ -86,7 +86,7 @@ public sealed class LineOfSightTests
     [Fact]
     public void TryGetTraversalCost_WhenCustomCostPolicyIsSupplied_ShouldUseIt()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(3);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
         HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);

@@ -1,6 +1,6 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit.Perf;
@@ -21,7 +21,7 @@ internal static class GridPathfindingBenchmarkScenario
 
     private static HexGridCentralNavigationSnapshot CreateSnapshot()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(MapRadius);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(MapRadius);
 
         AddHighCostArea(map);
         AddBarrier(map, -10, -20, 15, -9, -5);
@@ -31,7 +31,7 @@ internal static class GridPathfindingBenchmarkScenario
         return new HexGridCentralNavigationSnapshot(map, 0);
     }
 
-    private static void AddHighCostArea(HexGridCentralProvider<HexNavigationCell> map)
+    private static void AddHighCostArea(HexGridCentral<HexNavigationCell> map)
     {
         // 中央区域的高成本地形会排除部分较短但代价更高的绕行路线.
         for (int q = -6; q <= 6; q++)
@@ -49,7 +49,7 @@ internal static class GridPathfindingBenchmarkScenario
     }
 
     private static void AddBarrier(
-        HexGridCentralProvider<HexNavigationCell> map,
+        HexGridCentral<HexNavigationCell> map,
         int q,
         int minimumR,
         int maximumR,

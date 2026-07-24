@@ -1,6 +1,6 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 
 namespace Jarfter.Hexagonal.xUnit;
 
@@ -184,9 +184,9 @@ public sealed class HexagonalTests
     }
 
     [Fact]
-    public void HexGridCentralProvider_WhenAccessingValidCoordinates_ShouldStoreAndRetrieveElements()
+    public void HexGridCentral_WhenAccessingValidCoordinates_ShouldStoreAndRetrieveElements()
     {
-        HexGridCentralProvider<string> map = new HexGridCentralProvider<string>(1);
+        HexGridCentral<string> map = new HexGridCentral<string>(1);
         HexagonalCubePoint center = HexagonalCubePoint.Zero;
         HexagonalCubePoint edge = new HexagonalCubePoint(1, -1);
 
@@ -199,14 +199,14 @@ public sealed class HexagonalTests
         Assert.Equal("center", map[center]);
         Assert.Equal("edge", map[edge]);
         Assert.Equal(7, map.Elements.Length);
-        Assert.Equal("center", map.Elements[HexGridCentralProvider<string>.ToIndex(center)]);
-        Assert.Equal("edge", map.Elements[HexGridCentralProvider<string>.ToIndex(edge)]);
+        Assert.Equal("center", map.Elements[HexGridCentral<string>.ToIndex(center)]);
+        Assert.Equal("edge", map.Elements[HexGridCentral<string>.ToIndex(edge)]);
     }
 
     [Fact]
-    public void HexGridCentralProvider_WhenCoordinateIsOutsideRadius_ShouldReportMissingValue()
+    public void HexGridCentral_WhenCoordinateIsOutsideRadius_ShouldReportMissingValue()
     {
-        HexGridCentralProvider<string> map = new HexGridCentralProvider<string>(1);
+        HexGridCentral<string> map = new HexGridCentral<string>(1);
         HexagonalCubePoint outside = new HexagonalCubePoint(2, -1);
 
         Assert.False(map.Contains(outside));
@@ -216,9 +216,9 @@ public sealed class HexagonalTests
     }
 
     [Fact]
-    public void HexGridCentralProvider_WhenCoordinateIsPresent_ShouldReturnStoredValueFromQueries()
+    public void HexGridCentral_WhenCoordinateIsPresent_ShouldReturnStoredValueFromQueries()
     {
-        HexGridCentralProvider<string> map = new HexGridCentralProvider<string>(1);
+        HexGridCentral<string> map = new HexGridCentral<string>(1);
         HexagonalCubePoint point = new HexagonalCubePoint(1, 0);
         map[point] = "value";
 
@@ -232,13 +232,13 @@ public sealed class HexagonalTests
     {
         for (int radius = 0; radius <= 100; radius++)
         {
-            HexGridCentralProvider<int> map = new HexGridCentralProvider<int>(radius);
+            HexGridCentral<int> map = new HexGridCentral<int>(radius);
 
             // 验证 Index -> Point -> Index。
             for (int index = 0; index < map.Count; index++)
             {
-                HexagonalCubePoint point = HexGridCentralProvider<int>.FromIndex(index);
-                int actualIndex = HexGridCentralProvider<int>.ToIndex(point);
+                HexagonalCubePoint point = HexGridCentral<int>.FromIndex(index);
+                int actualIndex = HexGridCentral<int>.ToIndex(point);
 
                 Assert.Equal(index, actualIndex);
             }
@@ -259,8 +259,8 @@ public sealed class HexagonalTests
 
                     var point = new HexagonalCubePoint(q, r);
 
-                    int index = HexGridCentralProvider<int>.ToIndex(point);
-                    HexagonalCubePoint actualPoint = HexGridCentralProvider<int>.FromIndex(index);
+                    int index = HexGridCentral<int>.ToIndex(point);
+                    HexagonalCubePoint actualPoint = HexGridCentral<int>.FromIndex(index);
 
                     Assert.Equal(point, actualPoint);
 

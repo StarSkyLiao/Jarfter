@@ -1,5 +1,5 @@
 using Jarfter.Hexagonal.Coordinates;
-using Jarfter.Hexagonal.MapProvider;
+using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
@@ -31,7 +31,7 @@ public sealed class NavigationSnapshotTests
     [Fact]
     public void HexGridCentralNavigationSnapshot_WhenSourceMapChanges_ShouldKeepOriginalCells()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         HexagonalCubePoint point = new HexagonalCubePoint(1, -1);
         map[point] = new HexNavigationCell(2, 0.8);
 
@@ -51,7 +51,7 @@ public sealed class NavigationSnapshotTests
     [Fact]
     public void HexGridCentralNavigationSnapshot_WhenPointIsOutsideRadius_ShouldReportMissingCell()
     {
-        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(1);
+        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
 
         Assert.False(snapshot.TryGetCell(new HexagonalCubePoint(2, -1), out HexNavigationCell cell));
