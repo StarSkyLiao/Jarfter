@@ -9,8 +9,14 @@ namespace Jarfter.Hexagonal.Pathfinding.Navigation;
 /// </summary>
 public sealed class HexGridCentralNavigationBake
 {
+    /// <summary>
+    /// 获取轴向空间索引中每个障碍块包含的格子边长.
+    /// </summary>
+    public const int ObstacleChunkSize = 8;
+
     private readonly HexagonalCubePoint[] m_Points;
     private readonly int[] m_NeighborIndexes;
+    private readonly int[] m_ObstacleChunkIndexes;
 
     /// <summary>
     /// 使用指定中心六边形半径创建烘焙拓扑数据.
@@ -25,10 +31,17 @@ public sealed class HexGridCentralNavigationBake
         Count = 1 + 3 * radius + 3 * radius * radius;
         m_Points = new HexagonalCubePoint[Count];
         m_NeighborIndexes = new int[checked(Count * 6)];
+        ObstacleChunkMinimumQ = FloorDivide(-radius, ObstacleChunkSize);
+        ObstacleChunkMinimumR = FloorDivide(-radius, ObstacleChunkSize);
+        ObstacleChunkCountQ = FloorDivide(radius, ObstacleChunkSize) - ObstacleChunkMinimumQ + 1;
+        ObstacleChunkCountR = FloorDivide(radius, ObstacleChunkSize) - ObstacleChunkMinimumR + 1;
+        ObstacleChunkCount = checked(ObstacleChunkCountQ * ObstacleChunkCountR);
+        m_ObstacleChunkIndexes = new int[Count];
 
         for (int index = 0; index < Count; index++)
         {
             m_Points[index] = HexGridCentralProvider<HexNavigationCell>.FromIndex(index);
+            m_ObstacleChunkIndexes[index] = GetObstacleChunkIndexUnchecked(m_Points[index].Q, m_Points[index].R);
         }
 
         for (int index = 0; index < Count; index++)
@@ -54,6 +67,31 @@ public sealed class HexGridCentralNavigationBake
     /// 获取烘焙地图包含的格子数量.
     /// </summary>
     public int Count { get; }
+
+    /// <summary>
+    /// 获取障碍块在 Q 轴上的最小块坐标.
+    /// </summary>
+    public int ObstacleChunkMinimumQ { get; }
+
+    /// <summary>
+    /// 获取障碍块在 R 轴上的最小块坐标.
+    /// </summary>
+    public int ObstacleChunkMinimumR { get; }
+
+    /// <summary>
+    /// 获取障碍块在 Q 轴上的数量.
+    /// </summary>
+    public int ObstacleChunkCountQ { get; }
+
+    /// <summary>
+    /// 获取障碍块在 R 轴上的数量.
+    /// </summary>
+    public int ObstacleChunkCountR { get; }
+
+    /// <summary>
+    /// 获取障碍块总数.
+    /// </summary>
+    public int ObstacleChunkCount { get; }
 
     /// <summary>
     /// 获取指定稠密索引对应的六边形格子坐标.
@@ -102,5 +140,23 @@ public sealed class HexGridCentralNavigationBake
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(direction, 6);
 
         return m_NeighborIndexes[index * 6 + direction];
+    }
+
+    internal int GetObstacleChunkIndex(int cellIndex)
+    {
+        return m_ObstacleChunkIndexes[cellIndex];
+    }
+
+    internal int GetObstacleChunkIndexUnchecked(int q, int r)
+    {
+        int chunkQ = FloorDivide(q, ObstacleChunkSize) - ObstacleChunkMinimumQ;
+        int chunkR = FloorDivide(r, ObstacleChunkSize) - ObstacleChunkMinimumR;
+        return chunkQ * ObstacleChunkCountR + chunkR;
+    }
+
+    private static int FloorDivide(int dividend, int divisor)
+    {
+        int quotient = Math.DivRem(dividend, divisor, out int remainder);
+        return remainder < 0 ? quotient - 1 : quotient;
     }
 }

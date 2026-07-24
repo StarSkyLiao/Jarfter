@@ -163,7 +163,8 @@ public sealed class GridThetaStarTests
         Assert.True(statistics.ParentLineOfSightQueryCount > 0);
         Assert.True(statistics.SuccessfulParentLineOfSightQueryCount > 0);
         Assert.True(statistics.TraversedCellCount > 0);
-        Assert.True(statistics.NearbyCellQueryCount > 0);
+        Assert.Equal(0, statistics.NearbyCellQueryCount);
+        Assert.True(statistics.ObstacleFreeChunkRangeSkipCount > 0);
     }
 
     [Fact]
@@ -203,5 +204,34 @@ public sealed class GridThetaStarTests
         Assert.Equal(uncachedPath.Cost, cachedPath.Cost, 12);
         HexPathfindingStatistics statistics = Assert.IsType<HexPathfindingStatistics>(cachedPath.Statistics);
         Assert.True(statistics.LineOfSightCacheMissCount > 0);
+    }
+
+    [Fact]
+    public void FindPath_WhenObstacleChunkAccelerationIsDisabled_ShouldPreservePath()
+    {
+        HexGridCentralProvider<HexNavigationCell> map = new HexGridCentralProvider<HexNavigationCell>(3);
+        map[new HexagonalCubePoint(1, 0)] = new HexNavigationCell(1, 1);
+        HexGridCentralNavigationSnapshot snapshot = new HexGridCentralNavigationSnapshot(map, 0);
+        HexagonalLayout layout = new HexagonalLayout(HexagonalOrientation.PointyTop, 1);
+        HexagonalFootprint footprint = new HexagonalFootprint(0.25);
+
+        HexGridPath? acceleratedPath = HexGridThetaStar.Instance.FindPath(
+            snapshot,
+            layout,
+            HexagonalCubePoint.Zero,
+            new HexagonalCubePoint(3, 0),
+            footprint);
+        HexGridPath? unacceleratedPath = HexGridThetaStar.Instance.FindPath(
+            snapshot,
+            layout,
+            HexagonalCubePoint.Zero,
+            new HexagonalCubePoint(3, 0),
+            footprint,
+            requestOptions: new HexPathfindingRequestOptions { UseObstacleChunkAcceleration = false });
+
+        Assert.NotNull(acceleratedPath);
+        Assert.NotNull(unacceleratedPath);
+        Assert.Equal(acceleratedPath.Points.ToArray(), unacceleratedPath.Points.ToArray());
+        Assert.Equal(acceleratedPath.Cost, unacceleratedPath.Cost, 12);
     }
 }

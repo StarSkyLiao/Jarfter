@@ -21,6 +21,11 @@ internal sealed class HexLineOfSightMetrics
     internal long ObstacleIntersectionTestCount { get; private set; }
 
     /// <summary>
+    /// 获取因附近查询范围覆盖的障碍块均为空而跳过候选格枚举的次数.
+    /// </summary>
+    internal long ObstacleFreeChunkRangeSkipCount { get; private set; }
+
+    /// <summary>
     /// 记录一个主穿格.
     /// </summary>
     internal void AddTraversedCell()
@@ -42,5 +47,13 @@ internal sealed class HexLineOfSightMetrics
     internal void AddObstacleIntersectionTest()
     {
         ObstacleIntersectionTestCount++;
+    }
+
+    /// <summary>
+    /// 记录一次空障碍块范围跳过.
+    /// </summary>
+    internal void AddObstacleFreeChunkRangeSkip()
+    {
+        ObstacleFreeChunkRangeSkipCount++;
     }
 }

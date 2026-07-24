@@ -77,6 +77,7 @@ internal static class HexGridSearch
         Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache = ShouldEnableLineOfSightCache(mode, requestOptions)
             ? new Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>()
             : null;
+        bool useObstacleChunkAcceleration = requestOptions?.UseObstacleChunkAcceleration ?? true;
 
         if (!TryGetTraversableCell(snapshot, start) || !TryGetTraversableCell(snapshot, goal))
         {
@@ -149,6 +150,7 @@ internal static class HexGridSearch
                         actualCostPolicy,
                         statisticsCollector,
                         lineOfSightCache,
+                        useObstacleChunkAcceleration,
                         out HexagonalCubePoint parent,
                         out double neighborCost))
                 {
@@ -215,6 +217,7 @@ internal static class HexGridSearch
             ? new HexPathfindingStatisticsCollector()
             : null;
         workspace.BeginSearch(ShouldEnableLineOfSightCache(mode, requestOptions));
+        bool useObstacleChunkAcceleration = requestOptions?.UseObstacleChunkAcceleration ?? true;
 
         HexGridCentralNavigationBake bake = workspace.Bake;
 
@@ -291,6 +294,7 @@ internal static class HexGridSearch
                         clearanceApothemScale,
                         actualCostPolicy,
                         statisticsCollector,
+                        useObstacleChunkAcceleration,
                         out int parentIndex,
                         out double neighborCost))
                 {
@@ -327,6 +331,7 @@ internal static class HexGridSearch
         double clearanceApothemScale,
         IHexTraversalCostPolicy costPolicy,
         HexPathfindingStatisticsCollector? statisticsCollector,
+        bool useObstacleChunkAcceleration,
         out int parentIndex,
         out double cost)
     {
@@ -347,7 +352,8 @@ internal static class HexGridSearch
                     out double parentConnectionCost,
                     clearanceApothemScale,
                     costPolicy,
-                    statisticsCollector))
+                    statisticsCollector,
+                    useObstacleChunkAcceleration))
             {
                 statisticsCollector?.AddSuccessfulParentLineOfSightQuery();
                 parentIndex = currentParentIndex;
@@ -368,7 +374,8 @@ internal static class HexGridSearch
                 out double connectionCost,
                 clearanceApothemScale,
                 costPolicy,
-                statisticsCollector))
+                statisticsCollector,
+                useObstacleChunkAcceleration))
         {
             parentIndex = currentIndex;
             cost = currentCost + connectionCost;
@@ -390,7 +397,8 @@ internal static class HexGridSearch
         out double cost,
         double clearanceApothemScale,
         IHexTraversalCostPolicy costPolicy,
-        HexPathfindingStatisticsCollector? statisticsCollector)
+        HexPathfindingStatisticsCollector? statisticsCollector,
+        bool useObstacleChunkAcceleration)
     {
         HexGridCentralNavigationBake bake = workspace.Bake;
         HexagonalCubePoint start = bake.GetPoint(startIndex);
@@ -416,7 +424,8 @@ internal static class HexGridSearch
             out cost,
             clearanceApothemScale,
             costPolicy,
-            statisticsCollector?.LineOfSightMetrics);
+            statisticsCollector?.LineOfSightMetrics,
+            useObstacleChunkAcceleration);
 
         workspace.SetLineOfSightCache(start, end, isTraversable, cost);
         return isTraversable;
@@ -463,6 +472,7 @@ internal static class HexGridSearch
         IHexTraversalCostPolicy costPolicy,
         HexPathfindingStatisticsCollector? statisticsCollector,
         Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache,
+        bool useObstacleChunkAcceleration,
         out HexagonalCubePoint parent,
         out double cost)
     {
@@ -481,7 +491,8 @@ internal static class HexGridSearch
                     clearanceApothemScale,
                     costPolicy,
                     statisticsCollector,
-                    lineOfSightCache))
+                    lineOfSightCache,
+                    useObstacleChunkAcceleration))
             {
                 statisticsCollector?.AddSuccessfulParentLineOfSightQuery();
                 parent = currentRecord.Parent;
@@ -502,7 +513,8 @@ internal static class HexGridSearch
                 clearanceApothemScale,
                 costPolicy,
                 statisticsCollector,
-                lineOfSightCache))
+                lineOfSightCache,
+                useObstacleChunkAcceleration))
         {
             parent = current;
             cost = currentRecord.Cost + connectionCost;
@@ -524,7 +536,8 @@ internal static class HexGridSearch
         double clearanceApothemScale,
         IHexTraversalCostPolicy costPolicy,
         HexPathfindingStatisticsCollector? statisticsCollector,
-        Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache)
+        Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache,
+        bool useObstacleChunkAcceleration)
     {
         LineOfSightCacheKey key = new LineOfSightCacheKey(start, end);
 
@@ -549,7 +562,8 @@ internal static class HexGridSearch
             out cost,
             clearanceApothemScale,
             costPolicy,
-            statisticsCollector?.LineOfSightMetrics);
+            statisticsCollector?.LineOfSightMetrics,
+            useObstacleChunkAcceleration);
 
         lineOfSightCache?.Add(key, new LineOfSightCacheEntry(isTraversable, cost));
         return isTraversable;

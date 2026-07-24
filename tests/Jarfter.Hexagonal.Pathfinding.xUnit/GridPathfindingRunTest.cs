@@ -39,6 +39,15 @@ public static class GridPathfindingRunTest
     {
         LineOfSightCacheMode = HexLineOfSightCacheMode.Disabled
     };
+    private static readonly HexPathfindingRequestOptions s_UnchunkedRequestOptions = new HexPathfindingRequestOptions
+    {
+        UseObstacleChunkAcceleration = false
+    };
+    private static readonly HexPathfindingRequestOptions s_UnchunkedCachedRequestOptions = new HexPathfindingRequestOptions
+    {
+        LineOfSightCacheMode = HexLineOfSightCacheMode.Enabled,
+        UseObstacleChunkAcceleration = false
+    };
 
     /// <summary>
     /// 运行 A* 与 Theta* 的端到端快速性能测试.
@@ -83,6 +92,19 @@ public static class GridPathfindingRunTest
             new MethodWrapper<int>(FindPathWithReusableWorkspaceAStar),
             new MethodWrapper<int>(FindPathWithThetaStar),
             new MethodWrapper<int>(FindPathWithReusableWorkspaceThetaStar)
+        ]);
+    }
+
+    /// <summary>
+    /// 比较启用与关闭障碍块粗筛时的端到端寻路时间和托管内存分配.
+    /// </summary>
+    public static void RunObstacleChunkComparison()
+    {
+        Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.2) }, [
+            new MethodWrapper<int>(FindPathWithUnchunkedAStar),
+            new MethodWrapper<int>(FindPathWithAStar),
+            new MethodWrapper<int>(FindPathWithUnchunkedCachedThetaStar),
+            new MethodWrapper<int>(FindPathWithCachedThetaStar)
         ]);
     }
 
@@ -136,6 +158,32 @@ public static class GridPathfindingRunTest
         return path?.Points.Length ?? throw new InvalidOperationException("基准地图必须存在复用工作区的 Theta* 路径.");
     }
 
+    private static int FindPathWithUnchunkedAStar()
+    {
+        HexGridPath? path = HexGridAStar.Instance.FindPath(
+            s_Snapshot,
+            s_Layout,
+            s_Start,
+            s_Goal,
+            s_Footprint,
+            requestOptions: s_UnchunkedRequestOptions);
+
+        return path?.Points.Length ?? throw new InvalidOperationException("基准地图必须存在未启用障碍块粗筛的 A* 路径.");
+    }
+
+    private static int FindPathWithUnchunkedCachedThetaStar()
+    {
+        HexGridPath? path = HexGridThetaStar.Instance.FindPath(
+            s_Snapshot,
+            s_Layout,
+            s_Start,
+            s_Goal,
+            s_Footprint,
+            requestOptions: s_UnchunkedCachedRequestOptions);
+
+        return path?.Points.Length ?? throw new InvalidOperationException("基准地图必须存在未启用障碍块粗筛的缓存 Theta* 路径.");
+    }
+
     private static int FindPathWithUncachedThetaStar()
     {
         HexGridPath? path = HexGridThetaStar.Instance.FindPath(
@@ -183,6 +231,7 @@ public static class GridPathfindingRunTest
             + $"直视检测={statistics.LineOfSightQueryCount}, 父节点直视={statistics.ParentLineOfSightQueryCount}, "
             + $"父节点直视成功={statistics.SuccessfulParentLineOfSightQueryCount}, 穿格={statistics.TraversedCellCount}, "
             + $"附近格查询={statistics.NearbyCellQueryCount}, 障碍相交测试={statistics.ObstacleIntersectionTestCount}, "
+            + $"空障碍块跳过={statistics.ObstacleFreeChunkRangeSkipCount}, "
             + $"直视缓存命中={statistics.LineOfSightCacheHitCount}, 直视缓存未命中={statistics.LineOfSightCacheMissCount}");
     }
 

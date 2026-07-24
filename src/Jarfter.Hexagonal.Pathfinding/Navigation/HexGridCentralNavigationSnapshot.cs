@@ -10,6 +10,7 @@ namespace Jarfter.Hexagonal.Pathfinding.Navigation;
 public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
 {
     private readonly HexNavigationCell[] m_Cells;
+    private readonly bool[] m_ObstacleChunks;
 
     /// <summary>
     /// 从指定中心稠密地图创建导航快照.
@@ -42,6 +43,7 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         Version = version;
         Bake = bake;
         m_Cells = map.Elements.ToArray();
+        m_ObstacleChunks = CreateObstacleChunks(m_Cells, bake);
         MaximumObstacleApothemScale = GetMaximumObstacleApothemScale(m_Cells);
         MinimumTraversalMultiplier = GetMinimumTraversalMultiplier(m_Cells);
     }
@@ -83,6 +85,47 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         return true;
     }
 
+    /// <summary>
+    /// 判断指定轴向矩形覆盖的障碍块中是否至少存在一个障碍格.
+    /// 该方法仅用于直视检测的保守粗筛; 返回 <see langword="true"/> 不代表矩形内必然存在与线段相交的障碍.
+    /// </summary>
+    /// <param name="minimumQ">轴向矩形的最小 Q 坐标.</param>
+    /// <param name="maximumQ">轴向矩形的最大 Q 坐标.</param>
+    /// <param name="minimumR">轴向矩形的最小 R 坐标.</param>
+    /// <param name="maximumR">轴向矩形的最大 R 坐标.</param>
+    /// <returns>当至少一个相交障碍块包含障碍格时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    internal bool HasObstacleInChunkRange(int minimumQ, int maximumQ, int minimumR, int maximumR)
+    {
+        if (maximumQ < -Radius || minimumQ > Radius || maximumR < -Radius || minimumR > Radius)
+        {
+            return false;
+        }
+
+        int clampedMinimumQ = Math.Max(minimumQ, -Radius);
+        int clampedMaximumQ = Math.Min(maximumQ, Radius);
+        int clampedMinimumR = Math.Max(minimumR, -Radius);
+        int clampedMaximumR = Math.Min(maximumR, Radius);
+        int minimumChunkQ = Bake.GetObstacleChunkIndexUnchecked(clampedMinimumQ, 0) / Bake.ObstacleChunkCountR;
+        int maximumChunkQ = Bake.GetObstacleChunkIndexUnchecked(clampedMaximumQ, 0) / Bake.ObstacleChunkCountR;
+        int minimumChunkR = Bake.GetObstacleChunkIndexUnchecked(0, clampedMinimumR) % Bake.ObstacleChunkCountR;
+        int maximumChunkR = Bake.GetObstacleChunkIndexUnchecked(0, clampedMaximumR) % Bake.ObstacleChunkCountR;
+
+        for (int chunkQ = minimumChunkQ; chunkQ <= maximumChunkQ; chunkQ++)
+        {
+            int rowStart = chunkQ * Bake.ObstacleChunkCountR;
+
+            for (int chunkR = minimumChunkR; chunkR <= maximumChunkR; chunkR++)
+            {
+                if (m_ObstacleChunks[rowStart + chunkR])
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private static double GetMaximumObstacleApothemScale(ReadOnlySpan<HexNavigationCell> cells)
     {
         double maximum = 0;
@@ -93,6 +136,23 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         }
 
         return maximum;
+    }
+
+    private static bool[] CreateObstacleChunks(
+        ReadOnlySpan<HexNavigationCell> cells,
+        HexGridCentralNavigationBake bake)
+    {
+        bool[] chunks = new bool[bake.ObstacleChunkCount];
+
+        for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
+        {
+            if (cells[cellIndex].HasObstacle)
+            {
+                chunks[bake.GetObstacleChunkIndex(cellIndex)] = true;
+            }
+        }
+
+        return chunks;
     }
 
     private static HexGridCentralNavigationBake CreateBake(HexGridCentralProvider<HexNavigationCell> map)

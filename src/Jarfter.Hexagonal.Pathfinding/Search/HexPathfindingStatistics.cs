@@ -17,7 +17,8 @@ public sealed class HexPathfindingStatistics
         long lineOfSightCacheMissCount,
         long traversedCellCount,
         long nearbyCellQueryCount,
-        long obstacleIntersectionTestCount)
+        long obstacleIntersectionTestCount,
+        long obstacleFreeChunkRangeSkipCount)
     {
         ExpandedNodeCount = expandedNodeCount;
         LineOfSightQueryCount = lineOfSightQueryCount;
@@ -28,6 +29,7 @@ public sealed class HexPathfindingStatistics
         TraversedCellCount = traversedCellCount;
         NearbyCellQueryCount = nearbyCellQueryCount;
         ObstacleIntersectionTestCount = obstacleIntersectionTestCount;
+        ObstacleFreeChunkRangeSkipCount = obstacleFreeChunkRangeSkipCount;
     }
 
     /// <summary>
@@ -78,6 +80,11 @@ public sealed class HexPathfindingStatistics
     /// 获取所有直视检测累计执行的膨胀障碍相交测试数量.
     /// </summary>
     public long ObstacleIntersectionTestCount { get; }
+
+    /// <summary>
+    /// 获取因查询范围覆盖的障碍块均为空而跳过附近格枚举的次数.
+    /// </summary>
+    public long ObstacleFreeChunkRangeSkipCount { get; }
 }
 
 /// <summary>
@@ -183,6 +190,7 @@ internal sealed class HexPathfindingStatisticsCollector
             LineOfSightCacheMissCount,
             m_LineOfSightMetrics.TraversedCellCount,
             m_LineOfSightMetrics.NearbyCellQueryCount,
-            m_LineOfSightMetrics.ObstacleIntersectionTestCount);
+            m_LineOfSightMetrics.ObstacleIntersectionTestCount,
+            m_LineOfSightMetrics.ObstacleFreeChunkRangeSkipCount);
     }
 }

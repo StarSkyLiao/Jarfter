@@ -78,7 +78,8 @@ public static class HexLineOfSight
             out cost,
             clearanceApothemScale,
             costPolicy,
-            null);
+            null,
+            true);
     }
 
     /// <summary>
@@ -93,6 +94,7 @@ public static class HexLineOfSight
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
     /// <param name="costPolicy">计算主穿格移动成本的策略.</param>
     /// <param name="metrics">要更新的可选直视检测工作量统计器.</param>
+    /// <param name="useObstacleChunkAcceleration">是否对中心稠密快照启用障碍块粗筛.</param>
     /// <returns>当线段位于快照范围内且不接触任何膨胀后障碍时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
     internal static bool TryGetTraversalCost(
         IHexNavigationSnapshot snapshot,
@@ -103,7 +105,8 @@ public static class HexLineOfSight
         out double cost,
         double clearanceApothemScale,
         IHexTraversalCostPolicy? costPolicy,
-        HexLineOfSightMetrics? metrics)
+        HexLineOfSightMetrics? metrics,
+        bool useObstacleChunkAcceleration)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(layout);
@@ -145,6 +148,28 @@ public static class HexLineOfSight
             {
                 cost = 0;
                 return false;
+            }
+
+            if (useObstacleChunkAcceleration
+                && snapshot is HexGridCentralNavigationSnapshot centralSnapshot
+                && !centralSnapshot.HasObstacleInChunkRange(
+                    traversedCell.Point.Q - queryRadius,
+                    traversedCell.Point.Q + queryRadius,
+                    traversedCell.Point.R - queryRadius,
+                    traversedCell.Point.R + queryRadius))
+            {
+                // 块范围完全为空时, 六边形查询范围内也不可能存在障碍.
+                metrics?.AddObstacleFreeChunkRangeSkip();
+                double emptySectionLength = segmentLength * (traversedCell.EndFraction - traversedCell.StartFraction);
+                double emptySectionCost = actualCostPolicy.GetTraversalCost(emptySectionLength, traversedCellData);
+
+                if (!double.IsFinite(emptySectionCost) || emptySectionCost < 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(costPolicy));
+                }
+
+                totalCost += emptySectionCost;
+                continue;
             }
 
             foreach (HexagonalCubePoint candidate in traversedCell.Point.RangeIn(queryRadius))
