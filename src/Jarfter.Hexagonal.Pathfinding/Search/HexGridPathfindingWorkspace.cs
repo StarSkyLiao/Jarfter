@@ -50,7 +50,7 @@ public sealed class HexGridPathfindingWorkspace
 
     internal bool UsesLineOfSightCache { get; private set; }
 
-    internal void BeginSearch(bool usesLineOfSightCache)
+    internal void BeginSearch(bool usesLineOfSightCache, bool preserveLineOfSightCache = false)
     {
         // 代际标记避免为每次搜索清空与地图同等大小的状态数组.
         if (m_Generation == int.MaxValue)
@@ -68,7 +68,7 @@ public sealed class HexGridPathfindingWorkspace
         m_HeapCount = 0;
         UsesLineOfSightCache = usesLineOfSightCache;
 
-        if (usesLineOfSightCache)
+        if (usesLineOfSightCache && !preserveLineOfSightCache)
         {
             m_LineOfSightCache.Clear();
         }

@@ -52,6 +52,8 @@ internal static class HexGridSearch
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
     /// <param name="costPolicy">计算主穿格移动成本的策略.</param>
     /// <param name="requestOptions">本次格心搜索的节点、超时、取消与缓存策略.</param>
+    /// <param name="maximumDistanceSum">当前内部搜索阶段允许的节点到起终点距离和上限; 为 <see langword="null"/> 时不限制.</param>
+    /// <param name="runState">由范围扩张调用共享的累计运行状态; 常规单阶段搜索传入 <see langword="null"/>.</param>
     /// <returns>成功时得到格心航点路径; 失败时返回 <see langword="null"/>.</returns>
     internal static HexGridPath? FindPath(
         HexGridSearchMode mode,
@@ -62,7 +64,9 @@ internal static class HexGridSearch
         HexagonalFootprint footprint,
         double clearanceApothemScale,
         IHexTraversalCostPolicy? costPolicy,
-        HexPathfindingRequestOptions? requestOptions)
+        HexPathfindingRequestOptions? requestOptions,
+        int? maximumDistanceSum = null,
+        HexGridSearchRunState? runState = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(layout);
@@ -71,12 +75,30 @@ internal static class HexGridSearch
         ValidateCostPolicy(actualCostPolicy, nameof(costPolicy));
         requestOptions?.Validate();
         requestOptions?.CancellationToken.ThrowIfCancellationRequested();
-        HexPathfindingStatisticsCollector? statisticsCollector = requestOptions?.CollectStatistics == true
+
+        if (maximumDistanceSum is null
+            && runState is null
+            && requestOptions?.SearchScopeStrategy is IHexPathSearchScopeStrategy scopeStrategy)
+        {
+            return FindPathWithSearchScope(
+                mode,
+                snapshot,
+                layout,
+                start,
+                goal,
+                footprint,
+                clearanceApothemScale,
+                costPolicy,
+                requestOptions,
+                scopeStrategy);
+        }
+
+        HexPathfindingStatisticsCollector? statisticsCollector = runState?.StatisticsCollector ?? (requestOptions?.CollectStatistics == true
             ? new HexPathfindingStatisticsCollector()
-            : null;
-        Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache = ShouldEnableLineOfSightCache(mode, requestOptions)
+            : null);
+        Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? lineOfSightCache = runState?.LineOfSightCache ?? (ShouldEnableLineOfSightCache(mode, requestOptions)
             ? new Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>()
-            : null;
+            : null);
         bool useObstacleChunkAcceleration = requestOptions?.UseObstacleChunkAcceleration ?? true;
 
         if (!TryGetTraversableCell(snapshot, start) || !TryGetTraversableCell(snapshot, goal))
@@ -97,7 +119,7 @@ internal static class HexGridSearch
         openSet.Enqueue(
             new OpenNode(start, 0),
             GetHeuristicCost(layout.GetCenter(start), goalCenter, actualCostPolicy.MinimumCostPerUnitLength));
-        long startTimestamp = Stopwatch.GetTimestamp();
+        long startTimestamp = runState?.StartTimestamp ?? Stopwatch.GetTimestamp();
         int expandedNodeCount = 0;
 
         while (openSet.TryDequeue(out OpenNode openNode, out _))
@@ -121,18 +143,17 @@ internal static class HexGridSearch
                 return ReconstructPath(records, goal, currentRecord.Cost, snapshot.Version, statisticsCollector);
             }
 
-            if (requestOptions is { MaximumExpandedNodeCount: > 0 } && expandedNodeCount >= requestOptions.MaximumExpandedNodeCount)
+            if (!TryConsumeExpansionBudget(requestOptions, runState, ref expandedNodeCount, statisticsCollector))
             {
                 return null;
             }
 
-            expandedNodeCount++;
-            statisticsCollector?.AddExpandedNode();
-
             for (int direction = 0; direction < 6; direction++)
             {
                 HexagonalCubePoint neighbor = openNode.Point.NeighborAtUnchecked(direction);
-                if (closedSet.Contains(neighbor) || !TryGetTraversableCell(snapshot, neighbor))
+                if (closedSet.Contains(neighbor)
+                    || !IsWithinSearchScope(start, goal, neighbor, maximumDistanceSum)
+                    || !TryGetTraversableCell(snapshot, neighbor))
                 {
                     continue;
                 }
@@ -187,6 +208,8 @@ internal static class HexGridSearch
     /// <param name="clearanceApothemScale">额外安全边距相对于单位 Apothem 的非负比例.</param>
     /// <param name="costPolicy">计算主穿格移动成本的策略.</param>
     /// <param name="requestOptions">本次格心搜索的节点、超时、取消与缓存策略.</param>
+    /// <param name="maximumDistanceSum">当前内部搜索阶段允许的节点到起终点距离和上限; 为 <see langword="null"/> 时不限制.</param>
+    /// <param name="runState">由范围扩张调用共享的累计运行状态; 常规单阶段搜索传入 <see langword="null"/>.</param>
     /// <returns>成功时得到格心航点路径; 失败时返回 <see langword="null"/>.</returns>
     internal static HexGridPath? FindPath(
         HexGridSearchMode mode,
@@ -198,7 +221,9 @@ internal static class HexGridSearch
         HexagonalFootprint footprint,
         double clearanceApothemScale,
         IHexTraversalCostPolicy? costPolicy,
-        HexPathfindingRequestOptions? requestOptions)
+        HexPathfindingRequestOptions? requestOptions,
+        int? maximumDistanceSum = null,
+        HexGridSearchRunState? runState = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(workspace);
@@ -213,10 +238,30 @@ internal static class HexGridSearch
         ValidateCostPolicy(actualCostPolicy, nameof(costPolicy));
         requestOptions?.Validate();
         requestOptions?.CancellationToken.ThrowIfCancellationRequested();
-        HexPathfindingStatisticsCollector? statisticsCollector = requestOptions?.CollectStatistics == true
+
+        if (maximumDistanceSum is null
+            && runState is null
+            && requestOptions?.SearchScopeStrategy is IHexPathSearchScopeStrategy scopeStrategy)
+        {
+            return FindPathWithSearchScope(
+                mode,
+                snapshot,
+                workspace,
+                layout,
+                start,
+                goal,
+                footprint,
+                clearanceApothemScale,
+                costPolicy,
+                requestOptions,
+                scopeStrategy);
+        }
+
+        HexPathfindingStatisticsCollector? statisticsCollector = runState?.StatisticsCollector ?? (requestOptions?.CollectStatistics == true
             ? new HexPathfindingStatisticsCollector()
-            : null;
-        workspace.BeginSearch(ShouldEnableLineOfSightCache(mode, requestOptions));
+            : null);
+        workspace.BeginSearch(ShouldEnableLineOfSightCache(mode, requestOptions), runState?.HasStarted == true);
+        runState?.MarkStarted();
         bool useObstacleChunkAcceleration = requestOptions?.UseObstacleChunkAcceleration ?? true;
 
         HexGridCentralNavigationBake bake = workspace.Bake;
@@ -239,7 +284,7 @@ internal static class HexGridSearch
         workspace.EnqueueOrDecreasePriority(
             startIndex,
             GetHeuristicCost(layout.GetCenter(start), goalCenter, actualCostPolicy.MinimumCostPerUnitLength));
-        long startTimestamp = Stopwatch.GetTimestamp();
+        long startTimestamp = runState?.StartTimestamp ?? Stopwatch.GetTimestamp();
         int expandedNodeCount = 0;
 
         while (workspace.TryDequeue(out int currentIndex))
@@ -263,13 +308,10 @@ internal static class HexGridSearch
                 return ReconstructBakedPath(workspace, goalIndex, currentCost, snapshot.Version, statisticsCollector);
             }
 
-            if (requestOptions is { MaximumExpandedNodeCount: > 0 } && expandedNodeCount >= requestOptions.MaximumExpandedNodeCount)
+            if (!TryConsumeExpansionBudget(requestOptions, runState, ref expandedNodeCount, statisticsCollector))
             {
                 return null;
             }
-
-            expandedNodeCount++;
-            statisticsCollector?.AddExpandedNode();
 
             for (int direction = 0; direction < 6; direction++)
             {
@@ -280,7 +322,8 @@ internal static class HexGridSearch
                 }
 
                 HexagonalCubePoint neighbor = bake.GetPoint(neighborIndex);
-                if (!TryGetTraversableCell(snapshot, neighbor)
+                if (!IsWithinSearchScope(start, goal, neighbor, maximumDistanceSum)
+                    || !TryGetTraversableCell(snapshot, neighbor)
                     || !TryGetBestBakedConnection(
                         mode,
                         snapshot,
@@ -316,6 +359,153 @@ internal static class HexGridSearch
         }
 
         return null;
+    }
+
+    private static HexGridPath? FindPathWithSearchScope(
+        HexGridSearchMode mode,
+        IHexNavigationSnapshot snapshot,
+        HexagonalLayout layout,
+        HexagonalCubePoint start,
+        HexagonalCubePoint goal,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy? costPolicy,
+        HexPathfindingRequestOptions requestOptions,
+        IHexPathSearchScopeStrategy scopeStrategy)
+    {
+        HexGridSearchRunState runState = new HexGridSearchRunState(mode, requestOptions, usesStatelessLineOfSightCache: true);
+        int directDistance = start.DistanceTo(goal);
+        int? previousMaximumDistanceSum = null;
+
+        for (int attemptIndex = 0; attemptIndex < 32; attemptIndex++)
+        {
+            int? maximumDistanceSum = scopeStrategy.GetMaximumDistanceSum(directDistance, attemptIndex);
+            ValidateSearchScope(maximumDistanceSum, directDistance, previousMaximumDistanceSum, scopeStrategy);
+            if (IsTimeoutExpired(requestOptions, runState.StartTimestamp))
+            {
+                return null;
+            }
+
+            HexGridPath? path = FindPath(
+                mode,
+                snapshot,
+                layout,
+                start,
+                goal,
+                footprint,
+                clearanceApothemScale,
+                costPolicy,
+                requestOptions,
+                maximumDistanceSum,
+                runState);
+            if (path is not null || maximumDistanceSum is null)
+            {
+                return path;
+            }
+
+            previousMaximumDistanceSum = maximumDistanceSum;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(scopeStrategy), "范围扩张策略必须在 32 个阶段内返回无限制范围.");
+    }
+
+    private static HexGridPath? FindPathWithSearchScope(
+        HexGridSearchMode mode,
+        HexGridCentralNavigationSnapshot snapshot,
+        HexGridPathfindingWorkspace workspace,
+        HexagonalLayout layout,
+        HexagonalCubePoint start,
+        HexagonalCubePoint goal,
+        HexagonalFootprint footprint,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy? costPolicy,
+        HexPathfindingRequestOptions requestOptions,
+        IHexPathSearchScopeStrategy scopeStrategy)
+    {
+        HexGridSearchRunState runState = new HexGridSearchRunState(mode, requestOptions, usesStatelessLineOfSightCache: false);
+        int directDistance = start.DistanceTo(goal);
+        int? previousMaximumDistanceSum = null;
+
+        for (int attemptIndex = 0; attemptIndex < 32; attemptIndex++)
+        {
+            int? maximumDistanceSum = scopeStrategy.GetMaximumDistanceSum(directDistance, attemptIndex);
+            ValidateSearchScope(maximumDistanceSum, directDistance, previousMaximumDistanceSum, scopeStrategy);
+            if (IsTimeoutExpired(requestOptions, runState.StartTimestamp))
+            {
+                return null;
+            }
+
+            HexGridPath? path = FindPath(
+                mode,
+                snapshot,
+                workspace,
+                layout,
+                start,
+                goal,
+                footprint,
+                clearanceApothemScale,
+                costPolicy,
+                requestOptions,
+                maximumDistanceSum,
+                runState);
+            if (path is not null || maximumDistanceSum is null)
+            {
+                return path;
+            }
+
+            previousMaximumDistanceSum = maximumDistanceSum;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(scopeStrategy), "范围扩张策略必须在 32 个阶段内返回无限制范围.");
+    }
+
+    private static bool TryConsumeExpansionBudget(
+        HexPathfindingRequestOptions? requestOptions,
+        HexGridSearchRunState? runState,
+        ref int expandedNodeCount,
+        HexPathfindingStatisticsCollector? statisticsCollector)
+    {
+        if (runState is not null)
+        {
+            return runState.TryConsumeExpansionBudget(requestOptions!.MaximumExpandedNodeCount);
+        }
+
+        if (requestOptions is { MaximumExpandedNodeCount: > 0 } && expandedNodeCount >= requestOptions.MaximumExpandedNodeCount)
+        {
+            return false;
+        }
+
+        expandedNodeCount++;
+        statisticsCollector?.AddExpandedNode();
+        return true;
+    }
+
+    private static bool IsWithinSearchScope(
+        HexagonalCubePoint start,
+        HexagonalCubePoint goal,
+        HexagonalCubePoint point,
+        int? maximumDistanceSum)
+    {
+        return maximumDistanceSum is null
+            || start.DistanceTo(point) + point.DistanceTo(goal) <= maximumDistanceSum;
+    }
+
+    private static void ValidateSearchScope(
+        int? maximumDistanceSum,
+        int directDistance,
+        int? previousMaximumDistanceSum,
+        IHexPathSearchScopeStrategy scopeStrategy)
+    {
+        if (maximumDistanceSum is null)
+        {
+            return;
+        }
+
+        if (maximumDistanceSum < directDistance
+            || previousMaximumDistanceSum is int previous && maximumDistanceSum <= previous)
+        {
+            throw new ArgumentOutOfRangeException(nameof(scopeStrategy));
+        }
     }
 
     private static bool TryGetBestBakedConnection(
@@ -635,11 +825,56 @@ internal static class HexGridSearch
         };
     }
 
+    /// <summary>
+    /// 保存一次范围扩张请求跨阶段共用的时间、节点预算、统计和直视缓存.
+    /// </summary>
+    internal sealed class HexGridSearchRunState
+    {
+        private int m_ExpandedNodeCount;
+
+        internal HexGridSearchRunState(
+            HexGridSearchMode mode,
+            HexPathfindingRequestOptions requestOptions,
+            bool usesStatelessLineOfSightCache)
+        {
+            StartTimestamp = Stopwatch.GetTimestamp();
+            StatisticsCollector = requestOptions.CollectStatistics ? new HexPathfindingStatisticsCollector() : null;
+            LineOfSightCache = usesStatelessLineOfSightCache && ShouldEnableLineOfSightCache(mode, requestOptions)
+                ? new Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>()
+                : null;
+        }
+
+        internal long StartTimestamp { get; }
+
+        internal HexPathfindingStatisticsCollector? StatisticsCollector { get; }
+
+        internal Dictionary<LineOfSightCacheKey, LineOfSightCacheEntry>? LineOfSightCache { get; }
+
+        internal bool HasStarted { get; private set; }
+
+        internal void MarkStarted()
+        {
+            HasStarted = true;
+        }
+
+        internal bool TryConsumeExpansionBudget(int maximumExpandedNodeCount)
+        {
+            if (maximumExpandedNodeCount > 0 && m_ExpandedNodeCount >= maximumExpandedNodeCount)
+            {
+                return false;
+            }
+
+            m_ExpandedNodeCount++;
+            StatisticsCollector?.AddExpandedNode();
+            return true;
+        }
+    }
+
     private readonly record struct OpenNode(HexagonalCubePoint Point, double Cost);
 
     private readonly record struct NodeRecord(double Cost, HexagonalCubePoint Parent, bool HasParent);
 
-    private readonly record struct LineOfSightCacheKey(HexagonalCubePoint Start, HexagonalCubePoint End);
+    internal readonly record struct LineOfSightCacheKey(HexagonalCubePoint Start, HexagonalCubePoint End);
 
-    private readonly record struct LineOfSightCacheEntry(bool IsTraversable, double Cost);
+    internal readonly record struct LineOfSightCacheEntry(bool IsTraversable, double Cost);
 }
