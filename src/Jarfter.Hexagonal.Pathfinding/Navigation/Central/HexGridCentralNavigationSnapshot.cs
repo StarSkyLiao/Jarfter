@@ -1,8 +1,9 @@
 using System.Runtime.CompilerServices;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Grid;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Central;
 
 /// <summary>
 /// 表示从中心六边形稠密地图复制得到的不可变导航快照.

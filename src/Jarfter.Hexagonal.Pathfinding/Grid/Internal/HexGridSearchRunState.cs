@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using Jarfter.Hexagonal.Pathfinding.Grid.Requests;
+using Jarfter.Hexagonal.Pathfinding.Grid.Results;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Internal;
 
 /// <summary>
 /// 保存一次范围扩张请求跨阶段共用的时间、节点预算、统计和直视缓存.

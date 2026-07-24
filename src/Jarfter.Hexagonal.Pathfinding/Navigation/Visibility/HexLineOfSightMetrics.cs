@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
 /// <summary>
 /// 收集一次搜索期间由直视检测产生的底层工作量.

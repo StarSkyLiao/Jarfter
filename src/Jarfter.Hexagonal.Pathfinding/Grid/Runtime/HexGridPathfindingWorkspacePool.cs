@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Runtime;
 
 /// <summary>
 /// 为同一份中心稠密导航快照共享的拓扑并发租用独占格心寻路工作区.

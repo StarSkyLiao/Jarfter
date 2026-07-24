@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Internal;
 
 /// <summary>
 /// 指定共享格心搜索引擎使用的连接规则.

@@ -1,7 +1,8 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Grid;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Central;
 
 /// <summary>
 /// 提供可更新的中心稠密导航地图, 并在需要寻路时生成版本化的不可变快照.

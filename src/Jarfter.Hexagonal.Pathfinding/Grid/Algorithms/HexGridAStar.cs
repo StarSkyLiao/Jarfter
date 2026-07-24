@@ -1,8 +1,13 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Grid.Internal;
+using Jarfter.Hexagonal.Pathfinding.Grid.Requests;
+using Jarfter.Hexagonal.Pathfinding.Grid.Results;
+using Jarfter.Hexagonal.Pathfinding.Grid.Runtime;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Algorithms;
 
 /// <summary>
 /// 提供以六边形格心为搜索节点的 A* 寻路.

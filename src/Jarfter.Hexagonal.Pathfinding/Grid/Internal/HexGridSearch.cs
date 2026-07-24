@@ -1,9 +1,13 @@
 using System.Diagnostics;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Grid.Requests;
+using Jarfter.Hexagonal.Pathfinding.Grid.Results;
+using Jarfter.Hexagonal.Pathfinding.Grid.Runtime;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Internal;
 
 /// <summary>
 /// 提供 A* 与 Theta* 共用的格心搜索循环、成本模型和运行限制处理.

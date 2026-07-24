@@ -3,6 +3,10 @@ using Jarfter.Hexagonal.Geometry;
 using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
 using Jarfter.Hexagonal.Pathfinding.Grid;
+using Jarfter.Hexagonal.Pathfinding.Grid.Algorithms;
+using Jarfter.Hexagonal.Pathfinding.Grid.Results;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 

@@ -1,7 +1,8 @@
 using Jarfter.Hexagonal.Coordinates;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Grid.Internal;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Runtime;
 
 /// <summary>
 /// 为同一份中心稠密导航快照共享的烘焙拓扑复用格心搜索状态.

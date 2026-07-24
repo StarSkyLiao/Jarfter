@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Requests;
 
 /// <summary>
 /// 提供内置的格心搜索范围扩张策略.

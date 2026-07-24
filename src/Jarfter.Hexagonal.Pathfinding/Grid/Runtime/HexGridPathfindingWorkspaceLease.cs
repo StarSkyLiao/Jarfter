@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Runtime;
 
 /// <summary>
 /// 表示从 <see cref="HexGridPathfindingWorkspacePool"/> 租用的独占工作区.

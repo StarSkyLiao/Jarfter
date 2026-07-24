@@ -1,6 +1,7 @@
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Grid.Requests;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Results;
 
 /// <summary>
 /// 表示一次成功格心寻路的工作量统计.

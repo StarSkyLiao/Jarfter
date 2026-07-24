@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Grid.Requests;
+using Jarfter.Hexagonal.Pathfinding.Grid.Results;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Internal;
 
 /// <summary>
 /// 提供格心搜索循环共用的运行限制、范围判定、启发式和成本策略校验.

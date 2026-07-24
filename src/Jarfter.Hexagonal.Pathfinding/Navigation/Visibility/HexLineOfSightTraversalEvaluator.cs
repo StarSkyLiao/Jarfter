@@ -1,7 +1,9 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
 /// <summary>
 /// 执行已验证线段的穿格、障碍检测和移动成本累计.

@@ -1,6 +1,7 @@
 using Jarfter.Hexagonal.Coordinates;
+using Jarfter.Hexagonal.Pathfinding.Grid.Requests;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Results;
 
 /// <summary>
 /// 表示以六边形格心为节点的离散路径.

@@ -1,8 +1,9 @@
 using System.Runtime.CompilerServices;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Grid;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Central;
 
 /// <summary>
 /// 保存中心六边形稠密导航地图中不随地形或障碍变化的拓扑数据.

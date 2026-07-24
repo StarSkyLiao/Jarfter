@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Requests;
 
 /// <summary>
 /// 定义格心搜索在多阶段局部范围内扩张的策略.

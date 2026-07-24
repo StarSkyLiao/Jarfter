@@ -1,6 +1,7 @@
 using Jarfter.Hexagonal.Geometry;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
 /// <summary>
 /// 提供基于导航快照的保守六边形障碍视线检测.

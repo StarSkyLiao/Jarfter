@@ -1,6 +1,8 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Grid;
 using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
 namespace Jarfter.Hexagonal.Pathfinding.xUnit;
 

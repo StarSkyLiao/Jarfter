@@ -1,7 +1,8 @@
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
-namespace Jarfter.Hexagonal.Pathfinding.World;
+namespace Jarfter.Hexagonal.Pathfinding.World.Internal;
 
 /// <summary>
 /// 对已连接的连续世界路径执行可选平滑, 并重新验证各段可通行性及累计成本.

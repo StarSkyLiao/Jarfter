@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
 /// <summary>
 /// 使用 <see cref="HexNavigationCell.TraversalMultiplier"/> 计算移动成本的默认策略.

@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Requests;
 
 /// <summary>
 /// 定义一次寻路调用的运行限制与性能策略.

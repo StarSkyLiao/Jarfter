@@ -1,9 +1,10 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.Pathfinding.Grid;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Grid.Requests;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
-namespace Jarfter.Hexagonal.Pathfinding.World;
+namespace Jarfter.Hexagonal.Pathfinding.World.Internal;
 
 /// <summary>
 /// 为连续世界坐标端点选择可见且可通行的格心锚点.

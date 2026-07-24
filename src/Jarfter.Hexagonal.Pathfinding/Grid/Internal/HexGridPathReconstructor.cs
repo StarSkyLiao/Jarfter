@@ -1,6 +1,8 @@
 using Jarfter.Hexagonal.Coordinates;
+using Jarfter.Hexagonal.Pathfinding.Grid.Results;
+using Jarfter.Hexagonal.Pathfinding.Grid.Runtime;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Internal;
 
 /// <summary>
 /// 从稀疏记录或工作区父节点记录还原不可变格心路径结果.

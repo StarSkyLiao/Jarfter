@@ -1,8 +1,12 @@
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
-using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Grid.Results;
+using Jarfter.Hexagonal.Pathfinding.Grid.Runtime;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Internal;
 
 /// <summary>
 /// 评估格心之间的 A* 相邻连接与 Theta* 父节点直视连接.

@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
 /// <summary>
 /// 表示单个六边形格子的静态导航属性.

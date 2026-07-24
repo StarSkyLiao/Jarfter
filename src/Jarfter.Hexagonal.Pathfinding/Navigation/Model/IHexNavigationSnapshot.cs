@@ -1,6 +1,6 @@
 using Jarfter.Hexagonal.Coordinates;
 
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
 /// <summary>
 /// 定义一次寻路操作读取的不可变导航地图快照.

@@ -1,4 +1,5 @@
 using Jarfter.Hexagonal.Pathfinding.Navigation;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
 namespace Jarfter.Hexagonal.Pathfinding.World;
 

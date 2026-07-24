@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
 /// <summary>
 /// 定义线段穿过导航格子时的移动成本计算策略.

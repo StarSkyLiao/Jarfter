@@ -1,4 +1,4 @@
-namespace Jarfter.Hexagonal.Pathfinding.Grid;
+namespace Jarfter.Hexagonal.Pathfinding.Grid.Requests;
 
 /// <summary>
 /// 指定单次格心搜索的直视结果缓存策略.

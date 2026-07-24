@@ -1,7 +1,9 @@
 using System.Runtime.CompilerServices;
 using Jarfter.Hexagonal.Coordinates;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Central;
+using Jarfter.Hexagonal.Pathfinding.Navigation.Model;
 
-namespace Jarfter.Hexagonal.Pathfinding.Navigation;
+namespace Jarfter.Hexagonal.Pathfinding.Navigation.Visibility;
 
 internal static partial class HexLineOfSightTraversalEvaluator
 {
