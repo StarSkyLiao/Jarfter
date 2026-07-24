@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Jarfter.Core.Numerics;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
@@ -11,6 +12,8 @@ namespace Jarfter.Hexagonal.Pathfinding.Geometry;
 /// </summary>
 public struct HexagonalSegmentTraversal
 {
+    private static readonly double s_HalfSqrt3 = Math.Sqrt(3) / 2;
+
     private readonly HexagonalLayout m_Layout;
     private readonly HexagonalWorldPoint m_Start;
     private readonly HexagonalWorldPoint m_End;
@@ -108,21 +111,66 @@ public struct HexagonalSegmentTraversal
         double startY = m_Start.Y - center.Y;
         double exitFraction = 1;
 
-        foreach (HexagonalWorldPoint normal in HexNavigationGeometry.GetSideNormals(m_Orientation))
+        // 六个法线由三组互为相反数的轴构成. 每组只可能有一个正方向投影,
+        // 因此只需计算三次投影即可得到与逐边裁剪相同的最早出口.
+        if (m_Orientation == HexagonalOrientation.PointyTop)
         {
-            double deltaProjection = m_DeltaX * normal.X + m_DeltaY * normal.Y;
-            if (deltaProjection <= 0) continue;
-
-            double startProjection = startX * normal.X + startY * normal.Y;
-            double boundaryFraction = (m_Layout.UnitApothem - startProjection) / deltaProjection;
-
-            if (boundaryFraction > startFraction && boundaryFraction < exitFraction)
-            {
-                exitFraction = boundaryFraction;
-            }
+            ConsiderAxisExitFraction(startX, m_DeltaX, m_Layout.UnitApothem, startFraction, ref exitFraction);
+            ConsiderAxisExitFraction(
+                (startX * 0.5) + (startY * s_HalfSqrt3),
+                (m_DeltaX * 0.5) + (m_DeltaY * s_HalfSqrt3),
+                m_Layout.UnitApothem,
+                startFraction,
+                ref exitFraction);
+            ConsiderAxisExitFraction(
+                (-startX * 0.5) + (startY * s_HalfSqrt3),
+                (-m_DeltaX * 0.5) + (m_DeltaY * s_HalfSqrt3),
+                m_Layout.UnitApothem,
+                startFraction,
+                ref exitFraction);
+        }
+        else
+        {
+            ConsiderAxisExitFraction(
+                (startX * s_HalfSqrt3) + (startY * 0.5),
+                (m_DeltaX * s_HalfSqrt3) + (m_DeltaY * 0.5),
+                m_Layout.UnitApothem,
+                startFraction,
+                ref exitFraction);
+            ConsiderAxisExitFraction(startY, m_DeltaY, m_Layout.UnitApothem, startFraction, ref exitFraction);
+            ConsiderAxisExitFraction(
+                (-startX * s_HalfSqrt3) + (startY * 0.5),
+                (-m_DeltaX * s_HalfSqrt3) + (m_DeltaY * 0.5),
+                m_Layout.UnitApothem,
+                startFraction,
+                ref exitFraction);
         }
 
         return exitFraction;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ConsiderAxisExitFraction(
+        double startProjection,
+        double deltaProjection,
+        double apothem,
+        double startFraction,
+        ref double exitFraction)
+    {
+        if (deltaProjection == 0) return;
+
+        if (deltaProjection < 0)
+        {
+            startProjection = -startProjection;
+            deltaProjection = -deltaProjection;
+        }
+
+        double boundaryFraction = (apothem - startProjection) / deltaProjection;
+
+        if (boundaryFraction > startFraction && boundaryFraction < exitFraction)
+        {
+            exitFraction = boundaryFraction;
+        }
     }
 
     private static double GetSampleFractionOffset(

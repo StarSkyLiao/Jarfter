@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using Jarfter.Core.Numerics;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.MapProvider;
 
@@ -11,12 +10,17 @@ namespace Jarfter.Hexagonal.Pathfinding.Navigation;
 /// </summary>
 public sealed class HexGridCentralNavigationBake
 {
+    // 障碍块边长固定为 8, 因此算术右移可等价于向负无穷取整的除法.
+    private const int ObstacleChunkShift = 3;
+
     /// <summary>
     /// 获取轴向空间索引中每个障碍块包含的格子边长.
     /// </summary>
     public const int ObstacleChunkSize = 8;
 
     private readonly HexagonalCubePoint[] m_Points;
+    private readonly int[] m_AxialIndexes;
+    private readonly int m_AxialIndexWidth;
     private readonly int[] m_NeighborIndexes;
     private readonly int[] m_ObstacleChunkIndexes;
 
@@ -32,17 +36,22 @@ public sealed class HexGridCentralNavigationBake
         Radius = radius;
         Count = 1 + 3 * radius + 3 * radius * radius;
         m_Points = new HexagonalCubePoint[Count];
+        m_AxialIndexWidth = checked((2 * radius) + 1);
+        m_AxialIndexes = new int[checked(m_AxialIndexWidth * m_AxialIndexWidth)];
+        // 方形包围盒中不属于中心六边形的坐标保留 -1.
+        Array.Fill(m_AxialIndexes, -1);
         m_NeighborIndexes = new int[checked(Count * 6)];
-        ObstacleChunkMinimumQ = FloorDivide(-radius, ObstacleChunkSize);
-        ObstacleChunkMinimumR = FloorDivide(-radius, ObstacleChunkSize);
-        ObstacleChunkCountQ = FloorDivide(radius, ObstacleChunkSize) - ObstacleChunkMinimumQ + 1;
-        ObstacleChunkCountR = FloorDivide(radius, ObstacleChunkSize) - ObstacleChunkMinimumR + 1;
+        ObstacleChunkMinimumQ = -radius >> ObstacleChunkShift;
+        ObstacleChunkMinimumR = -radius >> ObstacleChunkShift;
+        ObstacleChunkCountQ = (radius >> ObstacleChunkShift) - ObstacleChunkMinimumQ + 1;
+        ObstacleChunkCountR = (radius >> ObstacleChunkShift) - ObstacleChunkMinimumR + 1;
         ObstacleChunkCount = checked(ObstacleChunkCountQ * ObstacleChunkCountR);
         m_ObstacleChunkIndexes = new int[Count];
 
         for (int index = 0; index < Count; index++)
         {
             m_Points[index] = HexGridCentralProvider<HexNavigationCell>.FromIndex(index);
+            m_AxialIndexes[GetAxialIndexUnchecked(m_Points[index].Q, m_Points[index].R)] = index;
             m_ObstacleChunkIndexes[index] = GetObstacleChunkIndexUnchecked(m_Points[index].Q, m_Points[index].R);
         }
 
@@ -118,19 +127,17 @@ public sealed class HexGridCentralNavigationBake
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetIndex(HexagonalCubePoint point, out int index)
     {
-        int q = point.Q;
-        int r = point.R;
-        int s = -q - r;
-        int ring = Math.Max(q.Abs(), Math.Max(r.Abs(), s.Abs()));
+        int qOffset = point.Q + Radius;
+        int rOffset = point.R + Radius;
 
-        if (ring > Radius)
+        if ((uint)qOffset >= (uint)m_AxialIndexWidth || (uint)rOffset >= (uint)m_AxialIndexWidth)
         {
             index = -1;
             return false;
         }
 
-        index = GetIndexUnchecked(q, r, s, ring);
-        return true;
+        index = m_AxialIndexes[(qOffset * m_AxialIndexWidth) + rOffset];
+        return index >= 0;
     }
 
     /// <summary>
@@ -162,55 +169,18 @@ public sealed class HexGridCentralNavigationBake
 
     internal int GetObstacleChunkQUnchecked(int q)
     {
-        return FloorDivide(q, ObstacleChunkSize) - ObstacleChunkMinimumQ;
+        return (q >> ObstacleChunkShift) - ObstacleChunkMinimumQ;
     }
 
     internal int GetObstacleChunkRUnchecked(int r)
     {
-        return FloorDivide(r, ObstacleChunkSize) - ObstacleChunkMinimumR;
+        return (r >> ObstacleChunkShift) - ObstacleChunkMinimumR;
     }
 
-    private static int GetIndexUnchecked(int q, int r, int s, int ring)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int GetAxialIndexUnchecked(int q, int r)
     {
-        if (ring == 0)
-        {
-            return 0;
-        }
-
-        int ringStart = 1 + (3 * ring * (ring - 1));
-        int offset;
-
-        if (s == ring && q < 0)
-        {
-            offset = q + ring;
-        }
-        else if (r == -ring && q >= 0)
-        {
-            offset = ring + q;
-        }
-        else if (q == ring && r < 0)
-        {
-            offset = (3 * ring) + r;
-        }
-        else if (s == -ring && q > 0)
-        {
-            offset = (4 * ring) - q;
-        }
-        else if (r == ring && q <= 0)
-        {
-            offset = (4 * ring) - q;
-        }
-        else
-        {
-            offset = (6 * ring) - r;
-        }
-
-        return ringStart + offset;
+        return (((q + Radius) * m_AxialIndexWidth) + r) + Radius;
     }
 
-    private static int FloorDivide(int dividend, int divisor)
-    {
-        int quotient = Math.DivRem(dividend, divisor, out int remainder);
-        return remainder < 0 ? quotient - 1 : quotient;
-    }
 }

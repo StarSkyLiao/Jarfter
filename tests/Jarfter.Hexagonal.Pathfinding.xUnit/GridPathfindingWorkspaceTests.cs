@@ -18,11 +18,24 @@ public sealed class GridPathfindingWorkspaceTests
 
         Assert.Same(firstSnapshot.Bake, secondSnapshot.Bake);
         Assert.Equal(37, firstSnapshot.Bake.Count);
+        Assert.Equal(8, HexGridCentralNavigationBake.ObstacleChunkSize);
+        Assert.Equal(-1, firstSnapshot.Bake.ObstacleChunkMinimumQ);
+        Assert.Equal(2, firstSnapshot.Bake.ObstacleChunkCountQ);
+        HexGridCentralNavigationBake chunkBoundaryBake = new HexGridCentralNavigationBake(8);
+        Assert.Equal(-1, chunkBoundaryBake.ObstacleChunkMinimumQ);
+        Assert.Equal(3, chunkBoundaryBake.ObstacleChunkCountQ);
         Assert.True(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(1, 0), out int index));
         Assert.Equal(new HexagonalCubePoint(1, 0), firstSnapshot.Bake.GetPoint(index));
         Assert.True(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(3, 0), out int boundaryIndex));
         Assert.Equal(-1, firstSnapshot.Bake.GetNeighborIndex(boundaryIndex, 0));
         Assert.False(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(3, 1), out _));
+
+        for (int expectedIndex = 0; expectedIndex < firstSnapshot.Bake.Count; expectedIndex++)
+        {
+            HexagonalCubePoint point = firstSnapshot.Bake.GetPoint(expectedIndex);
+            Assert.True(firstSnapshot.Bake.TryGetIndex(point, out int actualIndex));
+            Assert.Equal(expectedIndex, actualIndex);
+        }
     }
 
     [Fact]
@@ -99,6 +112,25 @@ public sealed class GridPathfindingWorkspaceTests
             HexagonalCubePoint.Zero,
             new HexagonalCubePoint(1, 0),
             new HexagonalFootprint(0.25)));
+    }
+
+    [Fact]
+    public void HexGridPathfindingWorkspacePool_WhenRentingAndReturning_ShouldReuseExclusiveWorkspace()
+    {
+        HexGridCentralNavigationBake bake = new HexGridCentralNavigationBake(3);
+        HexGridPathfindingWorkspacePool pool = new HexGridPathfindingWorkspacePool(bake, 1);
+        HexGridPathfindingWorkspaceLease firstLease = pool.Rent();
+        HexGridPathfindingWorkspace firstWorkspace = firstLease.Workspace;
+
+        firstLease.Dispose();
+        firstLease.Dispose();
+
+        using HexGridPathfindingWorkspaceLease reusedLease = pool.Rent();
+        using HexGridPathfindingWorkspaceLease concurrentLease = pool.Rent();
+
+        Assert.Same(bake, reusedLease.Workspace.Bake);
+        Assert.Same(firstWorkspace, reusedLease.Workspace);
+        Assert.NotSame(reusedLease.Workspace, concurrentLease.Workspace);
     }
 
     private static void AssertEquivalent(HexGridPath? expected, HexGridPath? actual)

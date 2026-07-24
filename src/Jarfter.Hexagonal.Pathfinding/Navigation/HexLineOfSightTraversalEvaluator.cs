@@ -28,9 +28,38 @@ internal static class HexLineOfSightTraversalEvaluator
     {
         if (snapshot is HexGridCentralNavigationSnapshot centralSnapshot)
         {
-            return TryGetTraversalCost(
-                new CentralNavigationCellAccessor(centralSnapshot),
-                centralSnapshot,
+            return metrics is null
+                ? TryGetTraversalCost(
+                    new CentralNavigationCellAccessor(centralSnapshot),
+                    default(NoLineOfSightMetrics),
+                    centralSnapshot,
+                    layout,
+                    start,
+                    end,
+                    footprint,
+                    out cost,
+                    clearanceApothemScale,
+                    costPolicy,
+                    useObstacleChunkAcceleration)
+                : TryGetTraversalCost(
+                    new CentralNavigationCellAccessor(centralSnapshot),
+                    new CollectingLineOfSightMetrics(metrics),
+                    centralSnapshot,
+                    layout,
+                    start,
+                    end,
+                    footprint,
+                    out cost,
+                    clearanceApothemScale,
+                    costPolicy,
+                    useObstacleChunkAcceleration);
+        }
+
+        return metrics is null
+            ? TryGetTraversalCost(
+                new NavigationSnapshotCellAccessor(snapshot),
+                default(NoLineOfSightMetrics),
+                null,
                 layout,
                 start,
                 end,
@@ -38,26 +67,24 @@ internal static class HexLineOfSightTraversalEvaluator
                 out cost,
                 clearanceApothemScale,
                 costPolicy,
-                metrics,
+                useObstacleChunkAcceleration)
+            : TryGetTraversalCost(
+                new NavigationSnapshotCellAccessor(snapshot),
+                new CollectingLineOfSightMetrics(metrics),
+                null,
+                layout,
+                start,
+                end,
+                footprint,
+                out cost,
+                clearanceApothemScale,
+                costPolicy,
                 useObstacleChunkAcceleration);
-        }
-
-        return TryGetTraversalCost(
-            new NavigationSnapshotCellAccessor(snapshot),
-            null,
-            layout,
-            start,
-            end,
-            footprint,
-            out cost,
-            clearanceApothemScale,
-            costPolicy,
-            metrics,
-            useObstacleChunkAcceleration);
     }
 
-    private static bool TryGetTraversalCost<TCellAccessor>(
+    private static bool TryGetTraversalCost<TCellAccessor, TMetrics>(
         TCellAccessor cellAccessor,
+        TMetrics metrics,
         HexGridCentralNavigationSnapshot? centralSnapshot,
         HexagonalLayout layout,
         HexagonalWorldPoint start,
@@ -66,9 +93,9 @@ internal static class HexLineOfSightTraversalEvaluator
         out double cost,
         double clearanceApothemScale,
         IHexTraversalCostPolicy costPolicy,
-        HexLineOfSightMetrics? metrics,
         bool useObstacleChunkAcceleration)
         where TCellAccessor : struct, INavigationCellAccessor
+        where TMetrics : struct, ILineOfSightMetrics
     {
         double maximumObstacleApothemScale = centralSnapshot?.MaximumObstacleApothemScale ?? cellAccessor.MaximumObstacleApothemScale;
         int queryRadius = GetQueryRadius(
@@ -83,7 +110,7 @@ internal static class HexLineOfSightTraversalEvaluator
 
         foreach (HexagonalSegmentCell traversedCell in HexNavigationGeometry.TraverseSegment(layout, start, end))
         {
-            metrics?.AddTraversedCell();
+            metrics.AddTraversedCell();
 
             if (!cellAccessor.TryGetCell(traversedCell.Point, out HexNavigationCell traversedCellData))
             {
@@ -100,7 +127,7 @@ internal static class HexLineOfSightTraversalEvaluator
                     traversedCell.Point.R + queryRadius))
             {
                 // 块范围完全为空时, 六边形查询范围内也不可能存在障碍.
-                metrics?.AddObstacleFreeChunkRangeSkip();
+                metrics.AddObstacleFreeChunkRangeSkip();
                 double emptySectionLength = segmentLength * (traversedCell.EndFraction - traversedCell.StartFraction);
                 double emptySectionCost = costPolicy.GetTraversalCost(emptySectionLength, traversedCellData);
 
@@ -115,14 +142,14 @@ internal static class HexLineOfSightTraversalEvaluator
 
             foreach (HexagonalCubePoint candidate in traversedCell.Point.RangeIn(queryRadius))
             {
-                metrics?.AddNearbyCellQuery();
+                metrics.AddNearbyCellQuery();
 
                 if (!cellAccessor.TryGetCell(candidate, out HexNavigationCell cell) || !cell.HasObstacle)
                 {
                     continue;
                 }
 
-                metrics?.AddObstacleIntersectionTest();
+                metrics.AddObstacleIntersectionTest();
 
                 if (HexNavigationGeometry.SegmentIntersectsInflatedHexagonUnchecked(
                         layout,
@@ -159,6 +186,74 @@ internal static class HexLineOfSightTraversalEvaluator
 
         cost = totalCost;
         return true;
+    }
+
+    private interface ILineOfSightMetrics
+    {
+        void AddTraversedCell();
+
+        void AddNearbyCellQuery();
+
+        void AddObstacleIntersectionTest();
+
+        void AddObstacleFreeChunkRangeSkip();
+    }
+
+    private readonly struct NoLineOfSightMetrics : ILineOfSightMetrics
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddTraversedCell()
+        {
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddNearbyCellQuery()
+        {
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddObstacleIntersectionTest()
+        {
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddObstacleFreeChunkRangeSkip()
+        {
+        }
+    }
+
+    private readonly struct CollectingLineOfSightMetrics : ILineOfSightMetrics
+    {
+        private readonly HexLineOfSightMetrics m_Metrics;
+
+        internal CollectingLineOfSightMetrics(HexLineOfSightMetrics metrics)
+        {
+            m_Metrics = metrics;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddTraversedCell()
+        {
+            m_Metrics.AddTraversedCell();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddNearbyCellQuery()
+        {
+            m_Metrics.AddNearbyCellQuery();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddObstacleIntersectionTest()
+        {
+            m_Metrics.AddObstacleIntersectionTest();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddObstacleFreeChunkRangeSkip()
+        {
+            m_Metrics.AddObstacleFreeChunkRangeSkip();
+        }
     }
 
     private interface INavigationCellAccessor
