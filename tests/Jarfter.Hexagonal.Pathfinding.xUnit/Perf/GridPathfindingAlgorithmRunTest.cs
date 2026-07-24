@@ -14,7 +14,7 @@ public static class GridPathfindingAlgorithmRunTest
     /// </summary>
     public static void RunComparison()
     {
-        Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.2) }, [
+        Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.5) }, [
             new MethodWrapper<int>(FindPathWithAStar),
             new MethodWrapper<int>(FindPathWithThetaStar)
         ]);

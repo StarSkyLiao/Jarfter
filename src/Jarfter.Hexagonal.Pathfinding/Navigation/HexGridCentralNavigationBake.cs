@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using Jarfter.Core.Numerics;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.MapProvider;
 
@@ -113,15 +115,21 @@ public sealed class HexGridCentralNavigationBake
     /// <param name="point">要转换的格子坐标.</param>
     /// <param name="index">转换成功时得到的稠密索引.</param>
     /// <returns>当坐标位于烘焙地图范围内时返回 <see langword="true"/>; 否则返回 <see langword="false"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetIndex(HexagonalCubePoint point, out int index)
     {
-        if (HexagonalCubePoint.Zero.DistanceTo(point) > Radius)
+        int q = point.Q;
+        int r = point.R;
+        int s = -q - r;
+        int ring = Math.Max(q.Abs(), Math.Max(r.Abs(), s.Abs()));
+
+        if (ring > Radius)
         {
             index = -1;
             return false;
         }
 
-        index = HexGridCentralProvider<HexNavigationCell>.ToIndex(point);
+        index = GetIndexUnchecked(q, r, s, ring);
         return true;
     }
 
@@ -149,9 +157,55 @@ public sealed class HexGridCentralNavigationBake
 
     internal int GetObstacleChunkIndexUnchecked(int q, int r)
     {
-        int chunkQ = FloorDivide(q, ObstacleChunkSize) - ObstacleChunkMinimumQ;
-        int chunkR = FloorDivide(r, ObstacleChunkSize) - ObstacleChunkMinimumR;
-        return chunkQ * ObstacleChunkCountR + chunkR;
+        return (GetObstacleChunkQUnchecked(q) * ObstacleChunkCountR) + GetObstacleChunkRUnchecked(r);
+    }
+
+    internal int GetObstacleChunkQUnchecked(int q)
+    {
+        return FloorDivide(q, ObstacleChunkSize) - ObstacleChunkMinimumQ;
+    }
+
+    internal int GetObstacleChunkRUnchecked(int r)
+    {
+        return FloorDivide(r, ObstacleChunkSize) - ObstacleChunkMinimumR;
+    }
+
+    private static int GetIndexUnchecked(int q, int r, int s, int ring)
+    {
+        if (ring == 0)
+        {
+            return 0;
+        }
+
+        int ringStart = 1 + (3 * ring * (ring - 1));
+        int offset;
+
+        if (s == ring && q < 0)
+        {
+            offset = q + ring;
+        }
+        else if (r == -ring && q >= 0)
+        {
+            offset = ring + q;
+        }
+        else if (q == ring && r < 0)
+        {
+            offset = (3 * ring) + r;
+        }
+        else if (s == -ring && q > 0)
+        {
+            offset = (4 * ring) - q;
+        }
+        else if (r == ring && q <= 0)
+        {
+            offset = (4 * ring) - q;
+        }
+        else
+        {
+            offset = (6 * ring) - r;
+        }
+
+        return ringStart + offset;
     }
 
     private static int FloorDivide(int dividend, int divisor)

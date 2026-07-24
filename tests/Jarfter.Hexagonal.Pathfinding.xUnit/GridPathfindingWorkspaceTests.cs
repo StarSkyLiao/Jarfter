@@ -22,6 +22,7 @@ public sealed class GridPathfindingWorkspaceTests
         Assert.Equal(new HexagonalCubePoint(1, 0), firstSnapshot.Bake.GetPoint(index));
         Assert.True(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(3, 0), out int boundaryIndex));
         Assert.Equal(-1, firstSnapshot.Bake.GetNeighborIndex(boundaryIndex, 0));
+        Assert.False(firstSnapshot.Bake.TryGetIndex(new HexagonalCubePoint(3, 1), out _));
     }
 
     [Fact]

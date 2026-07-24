@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.MapProvider;
 
@@ -9,8 +10,10 @@ namespace Jarfter.Hexagonal.Pathfinding.Navigation;
 /// </summary>
 public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
 {
+    private const int MaximumStackAllocatedObstacleChunkCount = 256;
+
     private readonly HexNavigationCell[] m_Cells;
-    private readonly bool[] m_ObstacleChunks;
+    private readonly int[] m_ObstacleChunkPrefixSums;
 
     /// <summary>
     /// 从指定中心稠密地图创建导航快照.
@@ -43,7 +46,12 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         Version = version;
         Bake = bake;
         m_Cells = map.Elements.ToArray();
-        m_ObstacleChunks = CreateObstacleChunks(m_Cells, bake);
+        Span<bool> obstacleChunks = bake.ObstacleChunkCount <= MaximumStackAllocatedObstacleChunkCount
+            ? stackalloc bool[bake.ObstacleChunkCount]
+            : new bool[bake.ObstacleChunkCount];
+        obstacleChunks.Clear();
+        PopulateObstacleChunks(m_Cells, obstacleChunks, bake);
+        m_ObstacleChunkPrefixSums = CreateObstacleChunkPrefixSums(obstacleChunks, bake);
         MaximumObstacleApothemScale = GetMaximumObstacleApothemScale(m_Cells);
         MinimumTraversalMultiplier = GetMinimumTraversalMultiplier(m_Cells);
     }
@@ -73,15 +81,16 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
     public double MinimumTraversalMultiplier { get; }
 
     /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetCell(HexagonalCubePoint point, out HexNavigationCell cell)
     {
-        if (HexagonalCubePoint.Zero.DistanceTo(point) > Radius)
+        if (!Bake.TryGetIndex(point, out int index))
         {
             cell = default;
             return false;
         }
 
-        cell = m_Cells[HexGridCentralProvider<HexNavigationCell>.ToIndex(point)];
+        cell = m_Cells[index];
         return true;
     }
 
@@ -105,25 +114,18 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         int clampedMaximumQ = Math.Min(maximumQ, Radius);
         int clampedMinimumR = Math.Max(minimumR, -Radius);
         int clampedMaximumR = Math.Min(maximumR, Radius);
-        int minimumChunkQ = Bake.GetObstacleChunkIndexUnchecked(clampedMinimumQ, 0) / Bake.ObstacleChunkCountR;
-        int maximumChunkQ = Bake.GetObstacleChunkIndexUnchecked(clampedMaximumQ, 0) / Bake.ObstacleChunkCountR;
-        int minimumChunkR = Bake.GetObstacleChunkIndexUnchecked(0, clampedMinimumR) % Bake.ObstacleChunkCountR;
-        int maximumChunkR = Bake.GetObstacleChunkIndexUnchecked(0, clampedMaximumR) % Bake.ObstacleChunkCountR;
-
-        for (int chunkQ = minimumChunkQ; chunkQ <= maximumChunkQ; chunkQ++)
-        {
-            int rowStart = chunkQ * Bake.ObstacleChunkCountR;
-
-            for (int chunkR = minimumChunkR; chunkR <= maximumChunkR; chunkR++)
-            {
-                if (m_ObstacleChunks[rowStart + chunkR])
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        int minimumChunkQ = Bake.GetObstacleChunkQUnchecked(clampedMinimumQ);
+        int maximumChunkQ = Bake.GetObstacleChunkQUnchecked(clampedMaximumQ);
+        int minimumChunkR = Bake.GetObstacleChunkRUnchecked(clampedMinimumR);
+        int maximumChunkR = Bake.GetObstacleChunkRUnchecked(clampedMaximumR);
+        int prefixSumRowLength = Bake.ObstacleChunkCountR + 1;
+        int maximumChunkQExclusive = maximumChunkQ + 1;
+        int maximumChunkRExclusive = maximumChunkR + 1;
+        int obstacleCount = m_ObstacleChunkPrefixSums[(maximumChunkQExclusive * prefixSumRowLength) + maximumChunkRExclusive]
+            - m_ObstacleChunkPrefixSums[(minimumChunkQ * prefixSumRowLength) + maximumChunkRExclusive]
+            - m_ObstacleChunkPrefixSums[(maximumChunkQExclusive * prefixSumRowLength) + minimumChunkR]
+            + m_ObstacleChunkPrefixSums[(minimumChunkQ * prefixSumRowLength) + minimumChunkR];
+        return obstacleCount > 0;
     }
 
     private static double GetMaximumObstacleApothemScale(ReadOnlySpan<HexNavigationCell> cells)
@@ -138,12 +140,11 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
         return maximum;
     }
 
-    private static bool[] CreateObstacleChunks(
+    private static void PopulateObstacleChunks(
         ReadOnlySpan<HexNavigationCell> cells,
+        Span<bool> chunks,
         HexGridCentralNavigationBake bake)
     {
-        bool[] chunks = new bool[bake.ObstacleChunkCount];
-
         for (int cellIndex = 0; cellIndex < cells.Length; cellIndex++)
         {
             if (cells[cellIndex].HasObstacle)
@@ -151,8 +152,34 @@ public sealed class HexGridCentralNavigationSnapshot : IHexNavigationSnapshot
                 chunks[bake.GetObstacleChunkIndex(cellIndex)] = true;
             }
         }
+    }
 
-        return chunks;
+    private static int[] CreateObstacleChunkPrefixSums(
+        ReadOnlySpan<bool> chunks,
+        HexGridCentralNavigationBake bake)
+    {
+        int prefixSumRowLength = bake.ObstacleChunkCountR + 1;
+        int[] prefixSums = new int[checked((bake.ObstacleChunkCountQ + 1) * prefixSumRowLength)];
+
+        for (int chunkQ = 1; chunkQ <= bake.ObstacleChunkCountQ; chunkQ++)
+        {
+            int obstacleCountInRow = 0;
+            int chunkRowStart = (chunkQ - 1) * bake.ObstacleChunkCountR;
+            int prefixSumRowStart = chunkQ * prefixSumRowLength;
+            int previousPrefixSumRowStart = (chunkQ - 1) * prefixSumRowLength;
+
+            for (int chunkR = 1; chunkR <= bake.ObstacleChunkCountR; chunkR++)
+            {
+                if (chunks[chunkRowStart + chunkR - 1])
+                {
+                    obstacleCountInRow++;
+                }
+
+                prefixSums[prefixSumRowStart + chunkR] = prefixSums[previousPrefixSumRowStart + chunkR] + obstacleCountInRow;
+            }
+        }
+
+        return prefixSums;
     }
 
     private static HexGridCentralNavigationBake CreateBake(HexGridCentralProvider<HexNavigationCell> map)

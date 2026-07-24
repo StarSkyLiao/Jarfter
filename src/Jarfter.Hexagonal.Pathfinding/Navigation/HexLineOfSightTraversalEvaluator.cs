@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Jarfter.Hexagonal.Coordinates;
 using Jarfter.Hexagonal.Geometry;
 using Jarfter.Hexagonal.Pathfinding.Geometry;
@@ -25,8 +26,53 @@ internal static class HexLineOfSightTraversalEvaluator
         HexLineOfSightMetrics? metrics,
         bool useObstacleChunkAcceleration)
     {
+        if (snapshot is HexGridCentralNavigationSnapshot centralSnapshot)
+        {
+            return TryGetTraversalCost(
+                new CentralNavigationCellAccessor(centralSnapshot),
+                centralSnapshot,
+                layout,
+                start,
+                end,
+                footprint,
+                out cost,
+                clearanceApothemScale,
+                costPolicy,
+                metrics,
+                useObstacleChunkAcceleration);
+        }
+
+        return TryGetTraversalCost(
+            new NavigationSnapshotCellAccessor(snapshot),
+            null,
+            layout,
+            start,
+            end,
+            footprint,
+            out cost,
+            clearanceApothemScale,
+            costPolicy,
+            metrics,
+            useObstacleChunkAcceleration);
+    }
+
+    private static bool TryGetTraversalCost<TCellAccessor>(
+        TCellAccessor cellAccessor,
+        HexGridCentralNavigationSnapshot? centralSnapshot,
+        HexagonalLayout layout,
+        HexagonalWorldPoint start,
+        HexagonalWorldPoint end,
+        HexagonalFootprint footprint,
+        out double cost,
+        double clearanceApothemScale,
+        IHexTraversalCostPolicy costPolicy,
+        HexLineOfSightMetrics? metrics,
+        bool useObstacleChunkAcceleration)
+        where TCellAccessor : struct, INavigationCellAccessor
+    {
+        double maximumObstacleApothemScale = centralSnapshot?.MaximumObstacleApothemScale ?? cellAccessor.MaximumObstacleApothemScale;
         int queryRadius = GetQueryRadius(
-            snapshot.MaximumObstacleApothemScale,
+            maximumObstacleApothemScale,
             footprint.ApothemScale,
             clearanceApothemScale);
         double segmentLength = start.DistanceTo(end);
@@ -36,14 +82,14 @@ internal static class HexLineOfSightTraversalEvaluator
         {
             metrics?.AddTraversedCell();
 
-            if (!snapshot.TryGetCell(traversedCell.Point, out HexNavigationCell traversedCellData))
+            if (!cellAccessor.TryGetCell(traversedCell.Point, out HexNavigationCell traversedCellData))
             {
                 cost = 0;
                 return false;
             }
 
             if (useObstacleChunkAcceleration
-                && snapshot is HexGridCentralNavigationSnapshot centralSnapshot
+                && centralSnapshot is not null
                 && !centralSnapshot.HasObstacleInChunkRange(
                     traversedCell.Point.Q - queryRadius,
                     traversedCell.Point.Q + queryRadius,
@@ -68,7 +114,7 @@ internal static class HexLineOfSightTraversalEvaluator
             {
                 metrics?.AddNearbyCellQuery();
 
-                if (!snapshot.TryGetCell(candidate, out HexNavigationCell cell) || !cell.HasObstacle)
+                if (!cellAccessor.TryGetCell(candidate, out HexNavigationCell cell) || !cell.HasObstacle)
                 {
                     continue;
                 }
@@ -107,6 +153,49 @@ internal static class HexLineOfSightTraversalEvaluator
 
         cost = totalCost;
         return true;
+    }
+
+    private interface INavigationCellAccessor
+    {
+        double MaximumObstacleApothemScale { get; }
+
+        bool TryGetCell(HexagonalCubePoint point, out HexNavigationCell cell);
+    }
+
+    private readonly struct CentralNavigationCellAccessor : INavigationCellAccessor
+    {
+        private readonly HexGridCentralNavigationSnapshot m_Snapshot;
+
+        internal CentralNavigationCellAccessor(HexGridCentralNavigationSnapshot snapshot)
+        {
+            m_Snapshot = snapshot;
+        }
+
+        public double MaximumObstacleApothemScale => m_Snapshot.MaximumObstacleApothemScale;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetCell(HexagonalCubePoint point, out HexNavigationCell cell)
+        {
+            return m_Snapshot.TryGetCell(point, out cell);
+        }
+    }
+
+    private readonly struct NavigationSnapshotCellAccessor : INavigationCellAccessor
+    {
+        private readonly IHexNavigationSnapshot m_Snapshot;
+
+        internal NavigationSnapshotCellAccessor(IHexNavigationSnapshot snapshot)
+        {
+            m_Snapshot = snapshot;
+        }
+
+        public double MaximumObstacleApothemScale => m_Snapshot.MaximumObstacleApothemScale;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetCell(HexagonalCubePoint point, out HexNavigationCell cell)
+        {
+            return m_Snapshot.TryGetCell(point, out cell);
+        }
     }
 
     private static int GetQueryRadius(
