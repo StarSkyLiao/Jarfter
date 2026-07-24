@@ -76,6 +76,9 @@ internal static class HexLineOfSightTraversalEvaluator
             footprint.ApothemScale,
             clearanceApothemScale);
         double segmentLength = start.DistanceTo(end);
+        double deltaX = end.X - start.X;
+        double deltaY = end.Y - start.Y;
+        ReadOnlySpan<HexagonalWorldPoint> sideNormals = HexNavigationGeometry.GetSideNormals(layout.Orientation);
         double totalCost = 0;
 
         foreach (HexagonalSegmentCell traversedCell in HexNavigationGeometry.TraverseSegment(layout, start, end))
@@ -123,8 +126,11 @@ internal static class HexLineOfSightTraversalEvaluator
 
                 if (HexNavigationGeometry.SegmentIntersectsInflatedHexagonUnchecked(
                         layout,
-                        start,
-                        end,
+                        start.X,
+                        start.Y,
+                        deltaX,
+                        deltaY,
+                        sideNormals,
                         candidate,
                         cell.ObstacleApothemScale,
                         footprint.ApothemScale,

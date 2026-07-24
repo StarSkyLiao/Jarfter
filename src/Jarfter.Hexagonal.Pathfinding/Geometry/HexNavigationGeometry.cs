@@ -100,47 +100,6 @@ public static class HexNavigationGeometry
         return new HexagonalSegmentTraversal(layout, start, end, layout.Orientation);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private static bool SegmentIntersectsConvexHexagon(
-        HexagonalWorldPoint start,
-        HexagonalWorldPoint end,
-        HexagonalWorldPoint center,
-        double apothem,
-        ReadOnlySpan<HexagonalWorldPoint> sideNormals)
-    {
-        double startX = start.X - center.X;
-        double startY = start.Y - center.Y;
-        double deltaX = end.X - start.X;
-        double deltaY = end.Y - start.Y;
-        double minimumT = 0;
-        double maximumT = 1;
-
-        // 对六个凸多边形半平面裁剪线段. 包含边界可避免角色从零宽缝隙穿过.
-        foreach (HexagonalWorldPoint normal in sideNormals)
-        {
-            double startProjection = startX * normal.X + startY * normal.Y;
-            double deltaProjection = deltaX * normal.X + deltaY * normal.Y;
-            double boundaryDifference = apothem - startProjection;
-
-            if (deltaProjection > 0)
-            {
-                maximumT = Math.Min(maximumT, boundaryDifference / deltaProjection);
-            }
-            else if (deltaProjection < 0)
-            {
-                minimumT = Math.Max(minimumT, boundaryDifference / deltaProjection);
-            }
-            else if (boundaryDifference < 0)
-            {
-                return false;
-            }
-
-            if (minimumT > maximumT) return false;
-        }
-
-        return true;
-    }
-
     /// <summary>
     /// 获取指定六边形朝向的六条边外法线.
     /// 返回的跨度引用静态数组, 调用方不得将其用于跨线程写入或修改.
@@ -176,10 +135,95 @@ public static class HexNavigationGeometry
     {
         if (obstacleApothemScale == 0) return false;
 
+        return SegmentIntersectsInflatedHexagonUnchecked(
+            layout,
+            start.X,
+            start.Y,
+            end.X - start.X,
+            end.Y - start.Y,
+            GetSideNormals(layout.Orientation),
+            obstaclePoint,
+            obstacleApothemScale,
+            footprintApothemScale,
+            clearanceApothemScale);
+    }
+
+    /// <summary>
+    /// 在调用方已预先计算线段方向和六边形边法线时, 判断线段是否与膨胀后障碍相交.
+    /// </summary>
+    /// <param name="layout">六边形布局.</param>
+    /// <param name="startX">线段起点的 X 分量.</param>
+    /// <param name="startY">线段起点的 Y 分量.</param>
+    /// <param name="deltaX">线段的 X 方向分量.</param>
+    /// <param name="deltaY">线段的 Y 方向分量.</param>
+    /// <param name="sideNormals">布局朝向对应的六条单位边外法线.</param>
+    /// <param name="obstaclePoint">障碍格心坐标.</param>
+    /// <param name="obstacleApothemScale">障碍 Apothem 比例.</param>
+    /// <param name="footprintApothemScale">移动足迹 Apothem 比例.</param>
+    /// <param name="clearanceApothemScale">安全边距 Apothem 比例.</param>
+    /// <returns>当线段接触或进入膨胀后障碍时返回 <see langword="true"/>.</returns>
+    internal static bool SegmentIntersectsInflatedHexagonUnchecked(
+        HexagonalLayout layout,
+        double startX,
+        double startY,
+        double deltaX,
+        double deltaY,
+        ReadOnlySpan<HexagonalWorldPoint> sideNormals,
+        HexagonalCubePoint obstaclePoint,
+        double obstacleApothemScale,
+        double footprintApothemScale,
+        double clearanceApothemScale)
+    {
+        if (obstacleApothemScale == 0) return false;
+
         HexagonalWorldPoint center = layout.GetCenter(obstaclePoint);
         double apothem = layout.UnitApothem * (
             obstacleApothemScale + footprintApothemScale + clearanceApothemScale);
-        return SegmentIntersectsConvexHexagon(start, end, center, apothem, GetSideNormals(layout.Orientation));
+        return SegmentIntersectsConvexHexagon(
+            startX - center.X,
+            startY - center.Y,
+            deltaX,
+            deltaY,
+            apothem,
+            sideNormals);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private static bool SegmentIntersectsConvexHexagon(
+        double startX,
+        double startY,
+        double deltaX,
+        double deltaY,
+        double apothem,
+        ReadOnlySpan<HexagonalWorldPoint> sideNormals)
+    {
+        double minimumT = 0;
+        double maximumT = 1;
+
+        // 对六个凸多边形半平面裁剪线段. 包含边界可避免角色从零宽缝隙穿过.
+        foreach (HexagonalWorldPoint normal in sideNormals)
+        {
+            double startProjection = startX * normal.X + startY * normal.Y;
+            double deltaProjection = deltaX * normal.X + deltaY * normal.Y;
+            double boundaryDifference = apothem - startProjection;
+
+            if (deltaProjection > 0)
+            {
+                maximumT = Math.Min(maximumT, boundaryDifference / deltaProjection);
+            }
+            else if (deltaProjection < 0)
+            {
+                minimumT = Math.Max(minimumT, boundaryDifference / deltaProjection);
+            }
+            else if (boundaryDifference < 0)
+            {
+                return false;
+            }
+
+            if (minimumT > maximumT) return false;
+        }
+
+        return true;
     }
 
     private static void ValidateFinitePoint(HexagonalWorldPoint point, string parameterName)
