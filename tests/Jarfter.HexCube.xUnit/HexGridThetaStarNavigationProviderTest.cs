@@ -25,7 +25,9 @@ public sealed class HexGridThetaStarNavigationProviderTest
 
         Assert.Equal(1, provider.GetMoveCost(destination));
         Assert.True(provider.UsesUniformTraversalCost);
-        Assert.True(provider.HasLineOfSight(new HexCubeLine2D(HexCubePoint.Zero, destination)));
+        HexCubeLine2D line = new HexCubeLine2D(HexCubePoint.Zero, destination);
+        Assert.True(provider.TryGetLineCost(line, out double cost));
+        Assert.Equal(line.Length, cost);
     }
 
     /// <summary>
@@ -41,6 +43,7 @@ public sealed class HexGridThetaStarNavigationProviderTest
         HexGridThetaStarNavigationProvider provider = new HexGridThetaStarNavigationProvider(map);
 
         Assert.Equal(-1, provider.GetMoveCost(obstacle));
-        Assert.False(provider.HasLineOfSight(new HexCubeLine2D(HexCubePoint.Zero, new HexCubePoint(2, 0))));
+        Assert.False(provider.TryGetLineCost(new HexCubeLine2D(HexCubePoint.Zero, new HexCubePoint(2, 0)), out _));
     }
+
 }

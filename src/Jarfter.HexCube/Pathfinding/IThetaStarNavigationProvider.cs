@@ -25,6 +25,25 @@ public interface IThetaStarNavigationProvider : IMoveCostProvider
     bool HasLineOfSight(HexCubeLine2D line);
 
     /// <summary>
+    /// 判断指定线段是否可通行, 并在可通行时获取其总代价.
+    /// 默认实现依次调用 <see cref="HasLineOfSight"/> 和 <see cref="GetLineCost"/>, 以保持已有实现的行为不变.
+    /// </summary>
+    /// <param name="line">待判断和计算代价的移动线段.</param>
+    /// <param name="cost">线段可通行时的总代价.</param>
+    /// <returns>线段可通行时返回 true, 否则返回 false.</returns>
+    bool TryGetLineCost(HexCubeLine2D line, out double cost)
+    {
+        if (!HasLineOfSight(line))
+        {
+            cost = 0;
+            return false;
+        }
+
+        cost = GetLineCost(line);
+        return true;
+    }
+
+    /// <summary>
     /// 获取沿指定可通行线段移动的总代价.
     /// 该方法只会在 <see cref="HasLineOfSight"/> 返回 true 后调用.
     /// </summary>

@@ -106,22 +106,22 @@ public partial interface IPathfinder
             double moveCost = navigationProvider.GetMoveCost(current);
             if (moveCost < 0)
             {
-                currentG = default;
+                currentG = 0;
                 return false;
             }
 
             bool hasCandidate = false;
             HexCubePoint bestParent = default;
-            double bestG = default;
+            double bestG = 0;
 
             if (cameFrom.TryGetValue(current, out HexCubePoint parent))
             {
                 HexCubeLine2D parentLine = new HexCubeLine2D(parent, current);
 
-                if (navigationProvider.HasLineOfSight(parentLine))
+                if (navigationProvider.TryGetLineCost(parentLine, out double parentLineCost))
                 {
                     bestParent = parent;
-                    bestG = gScore[parent] + navigationProvider.GetLineCost(parentLine);
+                    bestG = gScore[parent] + parentLineCost;
                     hasCandidate = true;
                 }
             }
@@ -166,7 +166,7 @@ public partial interface IPathfinder
 
             if (!hasCandidate)
             {
-                currentG = default;
+                currentG = 0;
                 return false;
             }
 

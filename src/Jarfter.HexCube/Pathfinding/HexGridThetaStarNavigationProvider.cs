@@ -42,6 +42,19 @@ public sealed class HexGridThetaStarNavigationProvider : IThetaStarNavigationPro
     public bool HasLineOfSight(HexCubeLine2D line) => !m_ObstacleIndex.Intersects(line);
 
     /// <inheritdoc />
+    public bool TryGetLineCost(HexCubeLine2D line, out double cost)
+    {
+        if (m_ObstacleIndex.Intersects(line))
+        {
+            cost = 0;
+            return false;
+        }
+
+        cost = m_TerrainIndex.CalculateCost(line);
+        return true;
+    }
+
+    /// <inheritdoc />
     public double GetLineCost(HexCubeLine2D line) => m_TerrainIndex.CalculateCost(line);
 
     private static HexGridCentral<HexNavigationCell> CopySnapshot(HexGridCentral<HexNavigationCell> source)

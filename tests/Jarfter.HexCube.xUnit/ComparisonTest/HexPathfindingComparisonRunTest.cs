@@ -20,4 +20,11 @@ public static class HexPathfindingComparisonRunTest
             new MethodWrapper<PathfindingResult>(HexLazyThetaStarRunTest.Run)
         ]);
     }
+
+    public static void RunResut()
+    {
+        HexAStarRunTest.RunResult();
+        HexThetaStarRunTest.RunResult();
+        HexLazyThetaStarRunTest.RunResult();
+    }
 }

@@ -90,10 +90,10 @@ public partial interface IPathfinder
                 HexCubeLine2D line = new HexCubeLine2D(parent, neighbor);
 
                 // Theta* 优先尝试从父节点直达邻居, 从而移除不必要的网格拐点.
-                if (navigationProvider.HasLineOfSight(line))
+                if (navigationProvider.TryGetLineCost(line, out double lineCost))
                 {
                     predecessor = parent;
-                    tentativeG = gScore[parent] + navigationProvider.GetLineCost(line);
+                    tentativeG = gScore[parent] + lineCost;
                     hasCandidate = true;
 
                     // 均匀代价满足三角不等式, 父节点直达不会劣于经当前节点的普通移动.

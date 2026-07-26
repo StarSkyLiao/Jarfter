@@ -7,11 +7,11 @@ namespace Jarfter.HexCube.xUnit;
 
 internal static class HexPathfindingConfig
 {
+    internal static readonly HexCubePoint Start = new HexCubePoint(-20, 0);
+    internal static readonly HexCubePoint Goal = new HexCubePoint(20, 0);
     internal static readonly HexGridCentral<HexNavigationCell> HexMap = CreateSnapshot();
     internal static readonly HexGridThetaStarNavigationProvider NavigationProvider =
         new HexGridThetaStarNavigationProvider(HexMap);
-    internal static readonly HexCubePoint Start = new HexCubePoint(-20, 0);
-    internal static readonly HexCubePoint Goal = new HexCubePoint(20, 0);
 
     internal static Bitmap RenderMap(HexGridCentral<HexNavigationCell> map,
         IReadOnlyList<HexCubePoint> path, Color32 pathColor)
@@ -77,6 +77,7 @@ internal static class HexPathfindingConfig
         AddBarrier(map, -10, -20, 15, -9, -5);
         AddBarrier(map, 0, -24, 24, 8, 12);
         AddBarrier(map, 10, -16, 20, -6, -2);
+        AddIrregularTerrainAndObstacles(map);
 
         return map;
     }
@@ -113,6 +114,35 @@ internal static class HexPathfindingConfig
             if (map.Contains(point))
             {
                 map[point] = new HexNavigationCell(1, 1);
+            }
+        }
+    }
+
+    private static void AddIrregularTerrainAndObstacles(HexGridCentral<HexNavigationCell> map)
+    {
+        Random random = new Random(20260726);
+
+        for (int q = -map.Radius; q <= map.Radius; q++)
+        {
+            for (int r = -map.Radius; r <= map.Radius; r++)
+            {
+                HexCubePoint point = new HexCubePoint(q, r);
+                if (!map.TryGetValue(point, out HexNavigationCell cell)) continue;
+                if (cell.ObstacleApothemScale > 0 || point.HexDistanceTo(Start) <= 2 || point.HexDistanceTo(Goal) <= 2) continue;
+
+                // 保留三道墙及其缺口, 使随机障碍增加复杂度而不会破坏既有的绕行结构.
+                if (q is -10 or 0 or 10) continue;
+
+                double randomValue = random.NextDouble();
+
+                if (randomValue < 0.05)
+                {
+                    map[point] = new HexNavigationCell(1, 0.3 + random.NextDouble() * 0.4);
+                }
+                else if (randomValue < 0.3)
+                {
+                    map[point] = new HexNavigationCell(1.25 + random.NextDouble() * 2.25);
+                }
             }
         }
     }
