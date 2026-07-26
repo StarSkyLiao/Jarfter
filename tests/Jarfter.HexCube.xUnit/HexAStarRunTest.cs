@@ -11,15 +11,20 @@ namespace Jarfter.HexCube.xUnit;
 /// <summary>
 /// 验证 A* 在包含高成本地形和交错障碍的六边形地图中能够规划路径, 并导出结果图像.
 /// </summary>
-public static class HexAStarTest
+public static class HexAStarRunTest
 {
+    private static readonly HexGridCentral<HexNavigationCell> s_Map = CreateSnapshot();
+    private static readonly IPathfinder s_Pathfinder = CreatePathfinder(s_Map);
+    private static readonly HexCubePoint s_Start = new HexCubePoint(-20, 0);
+    private static readonly HexCubePoint s_Goal = new HexCubePoint(20, 0);
+
     /// <summary>
     /// 比较 A* 路径搜索的执行耗时.
     /// </summary>
     public static void RunComparison()
     {
         Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.5) }, [
-            new MethodWrapper<IReadOnlyList<HexCubePoint>>(Run)
+            new MethodWrapper<IReadOnlyList<HexCubePoint>>(Run),
         ]);
     }
 
@@ -28,11 +33,10 @@ public static class HexAStarTest
     /// </summary>
     public static void RunResult()
     {
-        HexGridCentral<HexNavigationCell> map = CreateSnapshot();
-        IReadOnlyList<HexCubePoint> path = FindPath(map);
+        IReadOnlyList<HexCubePoint> path = Run();
         string filePath = Path.Combine("HexAStarPath.bmp");
 
-        BitmapExtension.SaveAsBmp(RenderMap(map, path), filePath);
+        BitmapExtension.SaveAsBmp(RenderMap(s_Map, path), filePath);
 
         Console.WriteLine(path.View());
         Console.WriteLine($"A* 路径图已生成: {Path.GetFullPath(filePath)}");
@@ -44,17 +48,11 @@ public static class HexAStarTest
     /// <returns>从起点到终点的六边形坐标序列.</returns>
     internal static IReadOnlyList<HexCubePoint> Run()
     {
-        HexGridCentral<HexNavigationCell> map = CreateSnapshot();
-        return FindPath(map);
+        return s_Pathfinder.FindPath(s_Start, s_Goal);
     }
 
-    private static IReadOnlyList<HexCubePoint> FindPath(HexGridCentral<HexNavigationCell> map)
-    {
-        IPathfinder pathfinder = new IPathfinder.AStar(
-            IHeuristic.Default.Instance,
-            new NavigationMoveCostProvider(map));
-        return pathfinder.FindPath(new HexCubePoint(-20, 0), new HexCubePoint(20, 0));
-    }
+    private static IPathfinder CreatePathfinder(HexGridCentral<HexNavigationCell> map) =>
+        new IPathfinder.AStar(IHeuristic.Default.Instance, new NavigationMoveCostProvider(map));
 
     private static Bitmap RenderMap(HexGridCentral<HexNavigationCell> map, IReadOnlyList<HexCubePoint> path)
     {

@@ -21,7 +21,7 @@ public partial interface IPathfinder
         public IReadOnlyList<HexCubePoint> FindPath(HexCubePoint start, HexCubePoint goal)
         {
             PriorityQueue<(HexCubePoint point, double pathCost), double> open =
-                new PriorityQueue<(HexCubePoint point, double pathCost), double>();
+                Factory.RentPriorityQueue<(HexCubePoint point, double pathCost), double>();
             Dictionary<HexCubePoint, HexCubePoint> cameFrom =
                 Factory.RentDictionary<Dictionary<HexCubePoint, HexCubePoint>>();
             Dictionary<HexCubePoint, double> gScore =
@@ -34,6 +34,7 @@ public partial interface IPathfinder
 
                 while (open.TryDequeue(out (HexCubePoint point, double pathCost) entry, out _))
                 {
+                    // ReSharper disable once CompareOfFloatsByEqualityOperator
                     if (!gScore.TryGetValue(entry.point, out double currentG) || currentG != entry.pathCost) continue;
                     if (entry.point == goal) return ReconstructPath(cameFrom, entry.point);
 
@@ -55,6 +56,7 @@ public partial interface IPathfinder
             }
             finally
             {
+                Factory.ReleasePriorityQueue(open);
                 Factory.ReleaseDictionary(cameFrom);
                 Factory.ReleaseDictionary(gScore);
             }
