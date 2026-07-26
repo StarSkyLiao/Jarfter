@@ -65,17 +65,25 @@ public partial interface IPathfinder
         /// <summary>
         /// 回溯生成路径.
         /// </summary>
-        private static List<HexCubePoint> ReconstructPath(Dictionary<HexCubePoint, HexCubePoint> cameFrom, HexCubePoint current)
+        private static HexCubePoint[] ReconstructPath(Dictionary<HexCubePoint, HexCubePoint> cameFrom, HexCubePoint current)
         {
-            List<HexCubePoint> path = [current];
+            int pathLength = 1;
+            HexCubePoint pathPoint = current;
 
-            while (cameFrom.TryGetValue(current, out HexCubePoint parent))
+            while (cameFrom.TryGetValue(pathPoint, out HexCubePoint parent))
             {
-                current = parent;
-                path.Add(current);
+                pathPoint = parent;
+                pathLength++;
             }
 
-            path.Reverse();
+            HexCubePoint[] path = new HexCubePoint[pathLength];
+
+            // 先确定精确长度, 再从终点反向填充, 避免 List 在长网格路径中多次扩容.
+            for (int index = pathLength - 1; index >= 0; index--)
+            {
+                path[index] = current;
+                if (index != 0) current = cameFrom[current];
+            }
 
             return path;
         }
