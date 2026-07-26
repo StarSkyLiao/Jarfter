@@ -4,7 +4,7 @@ namespace Jarfter.Drawing;
 /// 表示由 <see cref="Color32"/> 像素组成的二维位图.
 /// 像素通过索引器以 <c>[x, y]</c> 坐标访问, 其中 x 轴向右延伸, y 轴向下延伸.
 /// </summary>
-public sealed class Bitmap
+public sealed partial class Bitmap
 {
     private readonly Color32[,] m_Pixels;
 

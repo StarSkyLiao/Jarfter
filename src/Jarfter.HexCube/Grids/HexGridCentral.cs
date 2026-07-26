@@ -69,4 +69,21 @@ public sealed partial class HexGridCentral<TElement>(int radius) : IHexGrid<TEle
         if (index >= 0 && index < Count) return InternalElements[index];
         return defaultValue;
     }
+
+    public void InitializeCell(TElement element)
+    {
+        for (int index = 0; index < InternalElements.Length; index++)
+        {
+            InternalElements[index] = element;
+        }
+    }
+
+    public void InitializeCell(Func<TElement> element)
+    {
+        for (int index = 0; index < InternalElements.Length; index++)
+        {
+            InternalElements[index] = element();
+        }
+    }
+
 }
