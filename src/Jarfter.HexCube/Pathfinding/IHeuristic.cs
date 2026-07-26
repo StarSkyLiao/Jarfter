@@ -34,4 +34,24 @@ public interface IHeuristic
 
         private Default(){}
     }
+
+    /// <summary>
+    /// 提供基于六边形坐标平面直线距离的启发函数实现.
+    /// 适用于线段代价不小于对应 <see cref="HexCubePoint.DistanceTo"/> 结果的 Theta* 配置.
+    /// </summary>
+    public sealed class Euclidean : IHeuristic
+    {
+        /// <summary>
+        /// 提供欧几里得启发函数实现的单例.
+        /// </summary>
+        public static readonly Euclidean Instance = new Euclidean();
+
+        /// <inheritdoc />
+        public double Calculate(HexCubePoint current, HexCubePoint target)
+        {
+            return current.DistanceTo(target);
+        }
+
+        private Euclidean(){}
+    }
 }

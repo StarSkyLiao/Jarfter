@@ -17,8 +17,8 @@ public partial interface IPathfinder
         /// </summary>
         /// <param name="start">路径的起点.</param>
         /// <param name="goal">路径的目标点.</param>
-        /// <returns>从起点到目标点的路径; 不存在可达路径时返回空集合.</returns>
-        public IReadOnlyList<HexCubePoint> FindPath(HexCubePoint start, HexCubePoint goal)
+        /// <returns>包含从起点到目标点的路径及其总代价的搜索结果.</returns>
+        public PathfindingResult FindPath(HexCubePoint start, HexCubePoint goal)
         {
             PriorityQueue<(HexCubePoint point, double pathCost), double> open =
                 Factory.RentPriorityQueue<(HexCubePoint point, double pathCost), double>();
@@ -36,7 +36,7 @@ public partial interface IPathfinder
                 {
                     // ReSharper disable once CompareOfFloatsByEqualityOperator
                     if (!gScore.TryGetValue(entry.point, out double currentG) || currentG != entry.pathCost) continue;
-                    if (entry.point == goal) return ReconstructPath(cameFrom, entry.point);
+                    if (entry.point == goal) return new PathfindingResult(ReconstructPath(cameFrom, entry.point), currentG);
 
                     // 队列不支持降低优先级, 因此保留旧项并在出队时跳过, 避免重复扩展节点.
                     foreach (HexCubePoint neighbor in entry.point.Neighbors)
@@ -52,7 +52,7 @@ public partial interface IPathfinder
                     }
                 }
 
-                return [];
+                return PathfindingResult.Empty;
             }
             finally
             {

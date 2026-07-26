@@ -1,14 +1,25 @@
-﻿namespace Jarfter.HexCube.Numerics;
+namespace Jarfter.HexCube.Numerics;
 
 public readonly partial record struct HexCubeArea2D
 {
     /// <summary>
     /// 判断线段是否与当前六边形区域相交.
     /// </summary>
-    public bool IntersectsHex(HexCubeLine2D line)
+    /// <param name="line">待判断的线段.</param>
+    /// <returns>当线段与当前区域存在交集时返回 true, 否则返回 false.</returns>
+    public bool IntersectsHex(HexCubeLine2D line) => TryGetIntersectionRange(line, out _, out _);
+
+    /// <summary>
+    /// 尝试获取线段与当前六边形区域相交的参数区间.
+    /// </summary>
+    /// <param name="line">待判断的线段.</param>
+    /// <param name="tMin">相交区间的起始参数, 位于 [0, 1] 范围内.</param>
+    /// <param name="tMax">相交区间的结束参数, 位于 [0, 1] 范围内.</param>
+    /// <returns>当线段与当前区域存在交集时返回 true, 否则返回 false.</returns>
+    public bool TryGetIntersectionRange(HexCubeLine2D line, out double tMin, out double tMax)
     {
-        double tMin = 0;
-        double tMax = 1;
+        tMin = 0;
+        tMax = 1;
 
         if (!ClipAxis(line.Start.Q, line.End.Q, Position.Q - RadiusScale, Position.Q + RadiusScale, ref tMin, ref tMax))
         {
@@ -33,11 +44,11 @@ public readonly partial record struct HexCubeArea2D
     /// </summary>
     private static bool ClipAxis(double start, double end, double min, double max, ref double tMin, ref double tMax)
     {
-        const double Epsilon = 1e-12;
+        const double epsilon = 1e-12;
         double delta = end - start;
 
         // 线段在该坐标轴方向没有变化.
-        if (Math.Abs(delta) < Epsilon)
+        if (Math.Abs(delta) < epsilon)
         {
             return start >= min && start <= max;
         }

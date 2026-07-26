@@ -1,5 +1,4 @@
 using Jarfter.Core.Collections.Extensions;
-using Jarfter.Core.Diagnostics;
 using Jarfter.Drawing;
 using Jarfter.Drawing.GraphicIO;
 using Jarfter.HexCube.Grids;
@@ -13,48 +12,37 @@ namespace Jarfter.HexCube.xUnit;
 /// </summary>
 public static class HexAStarRunTest
 {
-    private static readonly HexGridCentral<HexNavigationCell> s_Map = CreateSnapshot();
-    private static readonly IPathfinder s_Pathfinder = CreatePathfinder(s_Map);
-    private static readonly HexCubePoint s_Start = new HexCubePoint(-20, 0);
-    private static readonly HexCubePoint s_Goal = new HexCubePoint(20, 0);
-
-    /// <summary>
-    /// 比较 A* 路径搜索的执行耗时.
-    /// </summary>
-    public static void RunComparison()
-    {
-        Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.5) }, [
-            new MethodWrapper<IReadOnlyList<HexCubePoint>>(Run),
-        ]);
-    }
+    private static readonly IPathfinder s_Pathfinder = CreatePathfinder(HexPathfindingConfig.HexMap);
 
     /// <summary>
     /// 执行 A* 搜索并将地图和路径保存为 BMP 图像.
     /// </summary>
     public static void RunResult()
     {
-        IReadOnlyList<HexCubePoint> path = Run();
+        PathfindingResult result = Run();
+        IReadOnlyList<HexCubePoint> path = result.Path;
         string filePath = Path.Combine("HexAStarPath.bmp");
 
-        BitmapExtension.SaveAsBmp(RenderMap(s_Map, path), filePath);
+        BitmapExtension.SaveAsBmp(RenderMap(HexPathfindingConfig.HexMap, path), filePath);
 
         Console.WriteLine(path.View());
+        Console.WriteLine($"A* 总移动代价: {result.TotalCost}");
         Console.WriteLine($"A* 路径图已生成: {Path.GetFullPath(filePath)}");
     }
 
     /// <summary>
-    /// 执行一次 A* 搜索并返回从起点到终点的路径.
+    /// 执行一次 A* 搜索并返回从起点到终点的路径及总代价.
     /// </summary>
-    /// <returns>从起点到终点的六边形坐标序列.</returns>
-    internal static IReadOnlyList<HexCubePoint> Run()
+    /// <returns>路径搜索结果.</returns>
+    internal static PathfindingResult Run()
     {
-        return s_Pathfinder.FindPath(s_Start, s_Goal);
+        return s_Pathfinder.FindPath(HexPathfindingConfig.Start, HexPathfindingConfig.Goal);
     }
 
-    private static IPathfinder CreatePathfinder(HexGridCentral<HexNavigationCell> map) =>
+    private static IPathfinder CreatePathfinder(HexGridCentral<HexPathfindingConfig.HexNavigationCell> map) =>
         new IPathfinder.AStar(IHeuristic.Default.Instance, new NavigationMoveCostProvider(map));
 
-    private static Bitmap RenderMap(HexGridCentral<HexNavigationCell> map, IReadOnlyList<HexCubePoint> path)
+    private static Bitmap RenderMap(HexGridCentral<HexPathfindingConfig.HexNavigationCell> map, IReadOnlyList<HexCubePoint> path)
     {
         const int hexRadius = 10;
         const int margin = hexRadius + 4;
@@ -73,7 +61,7 @@ public static class HexAStarRunTest
                 HexCubePoint point = new HexCubePoint(q, r);
                 if (!map.Contains(point)) continue;
 
-                HexNavigationCell cell = map[point];
+                HexPathfindingConfig.HexNavigationCell cell = map[point];
                 bitmap.DrawRegularHexagon(
                     ToPixel(point),
                     hexRadius,
@@ -101,71 +89,22 @@ public static class HexAStarRunTest
         );
     }
 
-    private static Color32 GetCellColor(HexNavigationCell cell)
+    private static Color32 GetCellColor(HexPathfindingConfig.HexNavigationCell cell)
     {
         if (cell.ObstacleApothemScale > 0) return new Color32(71, 85, 105);
         if (cell.TraversalMultiplier > 1) return new Color32(254, 215, 170);
         return new Color32(241, 245, 249);
     }
 
-    private static HexGridCentral<HexNavigationCell> CreateSnapshot()
-    {
-        HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(32);
-        map.InitializeCell(new HexNavigationCell(1));
-
-        AddHighCostArea(map);
-        AddBarrier(map, -10, -20, 15, -9, -5);
-        AddBarrier(map, 0, -24, 24, 8, 12);
-        AddBarrier(map, 10, -16, 20, -6, -2);
-
-        return map;
-    }
-
-    private static void AddHighCostArea(HexGridCentral<HexNavigationCell> map)
-    {
-        // 中央区域的高成本地形会排除部分较短但代价更高的绕行路线.
-        for (int q = -6; q <= 6; q++)
-        {
-            for (int r = -3; r <= 3; r++)
-            {
-                HexCubePoint point = new HexCubePoint(q, r);
-
-                if (map.Contains(point))
-                {
-                    map[point] = new HexNavigationCell(3);
-                }
-            }
-        }
-    }
-
-    private static void AddBarrier(HexGridCentral<HexNavigationCell> map, int q, int minimumR, int maximumR, int gapMinimumR, int gapMaximumR)
-    {
-        // 三道墙的缺口交错分布, 使路径需要反复改变行进方向而不能只做一次绕行.
-        for (int r = minimumR; r <= maximumR; r++)
-        {
-            if (r >= gapMinimumR && r <= gapMaximumR)
-            {
-                continue;
-            }
-
-            HexCubePoint point = new HexCubePoint(q, r);
-
-            if (map.Contains(point))
-            {
-                map[point] = new HexNavigationCell(1, 1);
-            }
-        }
-    }
-
-    private sealed class NavigationMoveCostProvider(HexGridCentral<HexNavigationCell> map) : IMoveCostProvider
+    private sealed class NavigationMoveCostProvider(HexGridCentral<HexPathfindingConfig.HexNavigationCell> map)
+        : IMoveCostProvider
     {
         /// <inheritdoc />
         public double GetMoveCost(HexCubePoint destination)
         {
-            HexNavigationCell cell = map[destination];
+            HexPathfindingConfig.HexNavigationCell cell = map[destination];
             return cell.ObstacleApothemScale > 0 ? -1 : cell.TraversalMultiplier;
         }
     }
 
-    private record struct HexNavigationCell(double TraversalMultiplier = 1, double ObstacleApothemScale = 0);
 }
