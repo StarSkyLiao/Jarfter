@@ -12,7 +12,8 @@ namespace Jarfter.HexCube.xUnit;
 /// </summary>
 public static class HexAStarRunTest
 {
-    private static readonly IPathfinder s_Pathfinder = CreatePathfinder(HexPathfindingConfig.HexMap);
+    private static readonly IPathfinder s_Pathfinder =
+        new IPathfinder.AStar(IHeuristic.Default.Instance, HexPathfindingConfig.NavigationProvider);
 
     /// <summary>
     /// 执行 A* 搜索并将地图和路径保存为 BMP 图像.
@@ -39,10 +40,7 @@ public static class HexAStarRunTest
         return s_Pathfinder.FindPath(HexPathfindingConfig.Start, HexPathfindingConfig.Goal);
     }
 
-    private static IPathfinder CreatePathfinder(HexGridCentral<HexPathfindingConfig.HexNavigationCell> map) =>
-        new IPathfinder.AStar(IHeuristic.Default.Instance, new NavigationMoveCostProvider(map));
-
-    private static Bitmap RenderMap(HexGridCentral<HexPathfindingConfig.HexNavigationCell> map, IReadOnlyList<HexCubePoint> path)
+    private static Bitmap RenderMap(HexGridCentral<HexNavigationCell> map, IReadOnlyList<HexCubePoint> path)
     {
         const int hexRadius = 10;
         const int margin = hexRadius + 4;
@@ -61,7 +59,7 @@ public static class HexAStarRunTest
                 HexCubePoint point = new HexCubePoint(q, r);
                 if (!map.Contains(point)) continue;
 
-                HexPathfindingConfig.HexNavigationCell cell = map[point];
+                HexNavigationCell cell = map[point];
                 bitmap.DrawRegularHexagon(
                     ToPixel(point),
                     hexRadius,
@@ -89,22 +87,11 @@ public static class HexAStarRunTest
         );
     }
 
-    private static Color32 GetCellColor(HexPathfindingConfig.HexNavigationCell cell)
+    private static Color32 GetCellColor(HexNavigationCell cell)
     {
         if (cell.ObstacleApothemScale > 0) return new Color32(71, 85, 105);
         if (cell.TraversalMultiplier > 1) return new Color32(254, 215, 170);
         return new Color32(241, 245, 249);
-    }
-
-    private sealed class NavigationMoveCostProvider(HexGridCentral<HexPathfindingConfig.HexNavigationCell> map)
-        : IMoveCostProvider
-    {
-        /// <inheritdoc />
-        public double GetMoveCost(HexCubePoint destination)
-        {
-            HexPathfindingConfig.HexNavigationCell cell = map[destination];
-            return cell.ObstacleApothemScale > 0 ? -1 : cell.TraversalMultiplier;
-        }
     }
 
 }

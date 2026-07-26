@@ -1,12 +1,15 @@
-﻿using Jarfter.Drawing;
+using Jarfter.Drawing;
 using Jarfter.HexCube.Grids;
 using Jarfter.HexCube.Numerics;
+using Jarfter.HexCube.Pathfinding;
 
 namespace Jarfter.HexCube.xUnit;
 
 internal static class HexPathfindingConfig
 {
     internal static readonly HexGridCentral<HexNavigationCell> HexMap = CreateSnapshot();
+    internal static readonly HexGridThetaStarNavigationProvider NavigationProvider =
+        new HexGridThetaStarNavigationProvider(HexMap);
     internal static readonly HexCubePoint Start = new HexCubePoint(-20, 0);
     internal static readonly HexCubePoint Goal = new HexCubePoint(20, 0);
 
@@ -113,6 +116,4 @@ internal static class HexPathfindingConfig
             }
         }
     }
-
-    internal record struct HexNavigationCell(double TraversalMultiplier = 1, double ObstacleApothemScale = 0);
 }
