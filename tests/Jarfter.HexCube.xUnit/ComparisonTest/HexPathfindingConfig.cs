@@ -56,7 +56,7 @@ internal static class HexPathfindingConfig
 
         (int x, int y) ToPixel(HexCubeGridPoint point) =>
         (
-            margin + (int)Math.Round(map.Radius * horizontalSpacing + (point.Q + point.R / 2) * horizontalSpacing),
+            margin + (int)Math.Round(map.Radius * horizontalSpacing + (point.Q + point.R / 2d) * horizontalSpacing),
             margin + (int)Math.Round(map.Radius * verticalSpacing + point.R * verticalSpacing)
         );
     }
