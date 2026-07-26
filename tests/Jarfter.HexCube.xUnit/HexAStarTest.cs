@@ -16,7 +16,7 @@ public static class HexAStarTest
     /// <summary>
     /// 比较 A* 路径搜索的执行耗时.
     /// </summary>
-    internal static void RunComparison()
+    public static void RunComparison()
     {
         Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.5) }, [
             new MethodWrapper<IReadOnlyList<HexCubePoint>>(Run)

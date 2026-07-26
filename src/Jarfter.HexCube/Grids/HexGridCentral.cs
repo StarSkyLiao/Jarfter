@@ -77,10 +77,7 @@ public sealed partial class HexGridCentral<TElement>(int radius) : IHexGrid<TEle
     /// <param name="element">要写入所有单元的元素值.</param>
     public void InitializeCell(TElement element)
     {
-        for (int index = 0; index < InternalElements.Length; index++)
-        {
-            InternalElements[index] = element;
-        }
+        Array.Fill(InternalElements, element);
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Jarfter.Core.Collections.ObjectModel;
 using Jarfter.HexCube.Numerics;
 
 namespace Jarfter.HexCube.Pathfinding;
@@ -19,36 +20,44 @@ public partial interface IPathfinder
         /// <returns>从起点到目标点的路径; 不存在可达路径时返回空集合.</returns>
         public IReadOnlyList<HexCubePoint> FindPath(HexCubePoint start, HexCubePoint goal)
         {
-            PriorityQueue<HexCubePoint, double> open = new PriorityQueue<HexCubePoint, double>();
-            Dictionary<HexCubePoint, HexCubePoint> cameFrom = [];
-            Dictionary<HexCubePoint, double> gScore = [];
+            PriorityQueue<(HexCubePoint point, double pathCost), double> open =
+                new PriorityQueue<(HexCubePoint point, double pathCost), double>();
+            Dictionary<HexCubePoint, HexCubePoint> cameFrom =
+                Factory.RentDictionary<Dictionary<HexCubePoint, HexCubePoint>>();
+            Dictionary<HexCubePoint, double> gScore =
+                Factory.RentDictionary<Dictionary<HexCubePoint, double>>();
 
-            gScore[start] = 0;
-
-            open.Enqueue(start, heuristic.Calculate(start, goal));
-
-            while (open.Count > 0)
+            try
             {
-                HexCubePoint current = open.Dequeue();
+                gScore[start] = 0;
+                open.Enqueue((start, 0), heuristic.Calculate(start, goal));
 
-                if (current == goal)
+                while (open.TryDequeue(out (HexCubePoint point, double pathCost) entry, out _))
                 {
-                    return ReconstructPath(cameFrom, current);
+                    if (!gScore.TryGetValue(entry.point, out double currentG) || currentG != entry.pathCost) continue;
+                    if (entry.point == goal) return ReconstructPath(cameFrom, entry.point);
+
+                    // 队列不支持降低优先级, 因此保留旧项并在出队时跳过, 避免重复扩展节点.
+                    foreach (HexCubePoint neighbor in entry.point.Neighbors)
+                    {
+                        double cost = moveCostProvider.GetMoveCost(neighbor);
+                        if (cost < 0) continue;
+                        double tentativeG = currentG + cost;
+                        if (gScore.TryGetValue(neighbor, out double oldG) && !(tentativeG < oldG)) continue;
+                        cameFrom[neighbor] = entry.point;
+                        gScore[neighbor] = tentativeG;
+                        double f = tentativeG + heuristic.Calculate(neighbor, goal);
+                        open.Enqueue((neighbor, tentativeG), f);
+                    }
                 }
-                foreach (HexCubePoint neighbor in current.Neighbors)
-                {
-                    double cost = moveCostProvider.GetMoveCost(neighbor);
-                    if (cost < 0) continue;
-                    double tentativeG = gScore[current] + cost;
-                    if (gScore.TryGetValue(neighbor, out double oldG) && !(tentativeG < oldG)) continue;
-                    cameFrom[neighbor] = current;
-                    gScore[neighbor] = tentativeG;
-                    double f = tentativeG + heuristic.Calculate(neighbor, goal);
-                    open.Enqueue(neighbor, f);
-                }
+
+                return [];
             }
-
-            return [];
+            finally
+            {
+                Factory.ReleaseDictionary(cameFrom);
+                Factory.ReleaseDictionary(gScore);
+            }
         }
 
         /// <summary>
