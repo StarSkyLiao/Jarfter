@@ -10,6 +10,24 @@ public readonly partial record struct HexCubeArea2D
     public bool IntersectsHex(HexCubeLine2D line) => TryGetIntersectionRange(line, out _, out _);
 
     /// <summary>
+    /// 判断线段是否穿过当前六边形区域的内部.
+    /// 仅在单点接触边界或顶点时返回 false, 使连续寻路能够以扩大后的障碍物顶点作为绕行折点.
+    /// </summary>
+    /// <param name="line">待判断的线段.</param>
+    /// <param name="epsilon">用于忽略单点边界接触的参数容差. 必须为有限非负数.</param>
+    /// <returns>线段与区域内部存在非零长度交集时返回 true, 否则返回 false.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="epsilon"/> 不是有限非负数时抛出.</exception>
+    public bool IntersectsInterior(HexCubeLine2D line, double epsilon = 1e-12)
+    {
+        if (!(epsilon >= 0) || !double.IsFinite(epsilon))
+        {
+            throw new ArgumentOutOfRangeException(nameof(epsilon), epsilon, "Epsilon must be a finite non-negative number.");
+        }
+
+        return TryGetIntersectionRange(line, out double tMin, out double tMax) && tMax - tMin > epsilon;
+    }
+
+    /// <summary>
     /// 尝试获取线段与当前六边形区域相交的参数区间.
     /// </summary>
     /// <param name="line">待判断的线段.</param>
