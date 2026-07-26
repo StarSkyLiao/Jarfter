@@ -10,8 +10,12 @@ public partial interface IPathfinder
     /// </summary>
     /// <param name="heuristic">用于估算到目标剩余代价的启发函数.</param>
     /// <param name="moveCostProvider">提供进入相邻坐标的移动代价和通行状态的对象.</param>
-    public class AStar(IHeuristic heuristic, IMoveCostProvider moveCostProvider) : IPathfinder
+    /// <param name="heuristicWeight">启发函数权重. 必须为有限正数; 小于 1 时降低启发强度, 等于 1 时使用标准 A*, 大于 1 时优先搜索速度而可能放弃最优路径.</param>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="heuristicWeight"/> 不是有限正数时抛出.</exception>
+    public class AStar(IHeuristic heuristic, IMoveCostProvider moveCostProvider, double heuristicWeight = 1) : IPathfinder
     {
+        private readonly double m_HeuristicWeight = HeuristicWeight.Validate(heuristicWeight, nameof(heuristicWeight));
+
         /// <summary>
         /// 在六边形网格中搜索路径.
         /// </summary>
@@ -30,7 +34,7 @@ public partial interface IPathfinder
             try
             {
                 gScore[start] = 0;
-                open.Enqueue((start, 0), heuristic.Calculate(start, goal));
+                open.Enqueue((start, 0), m_HeuristicWeight * heuristic.Calculate(start, goal));
 
                 while (open.TryDequeue(out (HexCubeGridPoint point, double pathCost) entry, out _))
                 {
@@ -47,7 +51,7 @@ public partial interface IPathfinder
                         if (gScore.TryGetValue(neighbor, out double oldG) && !(tentativeG < oldG)) continue;
                         cameFrom[neighbor] = entry.point;
                         gScore[neighbor] = tentativeG;
-                        double f = tentativeG + heuristic.Calculate(neighbor, goal);
+                        double f = tentativeG + m_HeuristicWeight * heuristic.Calculate(neighbor, goal);
                         open.Enqueue((neighbor, tentativeG), f);
                     }
                 }

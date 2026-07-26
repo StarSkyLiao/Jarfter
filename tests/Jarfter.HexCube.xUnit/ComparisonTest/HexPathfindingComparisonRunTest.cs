@@ -16,15 +16,24 @@ public static class HexPathfindingComparisonRunTest
     {
         Benchmark.RunQuickTest(new BenchmarkOption(10) { TargetTime = TimeSpan.FromSeconds(0.15) }, [
             new MethodWrapper<PathfindingResult>(HexAStarRunTest.Run),
+            new MethodWrapper<PathfindingResult>(HexWeightedAStarRunTest.Run),
             new MethodWrapper<PathfindingResult>(HexThetaStarRunTest.Run),
-            new MethodWrapper<PathfindingResult>(HexLazyThetaStarRunTest.Run)
+            new MethodWrapper<PathfindingResult>(HexThetaStarWeightedRunTest.Run),
+            new MethodWrapper<PathfindingResult>(HexLazyThetaStarRunTest.Run),
+            new MethodWrapper<PathfindingResult>(HexLazyThetaStarWeightedRunTest.Run),
         ]);
     }
 
-    public static void RunResut()
+    /// <summary>
+    /// 依次运行所有路径搜索器并导出对应的路径图像.
+    /// </summary>
+    public static void RunResult()
     {
         HexAStarRunTest.RunResult();
+        HexWeightedAStarRunTest.RunResult();
         HexThetaStarRunTest.RunResult();
+        HexThetaStarWeightedRunTest.RunResult();
         HexLazyThetaStarRunTest.RunResult();
+        HexLazyThetaStarWeightedRunTest.RunResult();
     }
 }

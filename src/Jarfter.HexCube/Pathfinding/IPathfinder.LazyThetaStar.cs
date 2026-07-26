@@ -12,8 +12,12 @@ public partial interface IPathfinder
     /// </summary>
     /// <param name="heuristic">用于估算到目标剩余代价的启发函数. 返回值不得高估 <paramref name="navigationProvider"/> 的实际线段移动代价.</param>
     /// <param name="navigationProvider">提供网格移动代价、线段视线和线段移动代价的对象.</param>
-    public sealed class LazyThetaStar(IHeuristic heuristic, IThetaStarNavigationProvider navigationProvider) : IPathfinder
+    /// <param name="heuristicWeight">启发函数权重. 必须为有限正数; 小于 1 时降低启发强度, 等于 1 时保持当前 Lazy Theta* 行为, 大于 1 时优先搜索速度而可能返回代价更高的路径.</param>
+    /// <exception cref="ArgumentOutOfRangeException">当 <paramref name="heuristicWeight"/> 不是有限正数时抛出.</exception>
+    public sealed class LazyThetaStar(IHeuristic heuristic, IThetaStarNavigationProvider navigationProvider, double heuristicWeight = 1) : IPathfinder
     {
+        private readonly double m_HeuristicWeight = HeuristicWeight.Validate(heuristicWeight, nameof(heuristicWeight));
+
         /// <summary>
         /// 在六边形网格中搜索经过延迟视线验证的路径.
         /// </summary>
@@ -36,7 +40,7 @@ public partial interface IPathfinder
             try
             {
                 gScore[start] = 0;
-                open.Enqueue((start, 0), heuristic.Calculate(start, goal));
+                open.Enqueue((start, 0), m_HeuristicWeight * heuristic.Calculate(start, goal));
 
                 while (open.TryDequeue(out (HexCubeGridPoint point, double pathCost) entry, out _))
                 {
@@ -62,7 +66,7 @@ public partial interface IPathfinder
                         cameFrom[neighbor] = cameFrom.TryGetValue(entry.point, out HexCubeGridPoint parent) ? parent : entry.point;
                         localParents[neighbor] = entry.point;
                         gScore[neighbor] = tentativeG;
-                        double f = tentativeG + heuristic.Calculate(neighbor, goal);
+                        double f = tentativeG + m_HeuristicWeight * heuristic.Calculate(neighbor, goal);
                         open.Enqueue((neighbor, tentativeG), f);
                     }
                 }
