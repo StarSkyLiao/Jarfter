@@ -50,12 +50,9 @@ public static class HexAStarTest
 
     private static IReadOnlyList<HexCubePoint> FindPath(HexGridCentral<HexNavigationCell> map)
     {
-        IPathfinder pathfinder = new IPathfinder.AStar(IHeuristic.Default.Instance, point =>
-        {
-            HexNavigationCell hexNavigationCell = map[point];
-            if (hexNavigationCell.ObstacleApothemScale > 0) return -1;
-            return hexNavigationCell.TraversalMultiplier;
-        });
+        IPathfinder pathfinder = new IPathfinder.AStar(
+            IHeuristic.Default.Instance,
+            new NavigationMoveCostProvider(map));
         return pathfinder.FindPath(new HexCubePoint(-20, 0), new HexCubePoint(20, 0));
     }
 
@@ -118,7 +115,6 @@ public static class HexAStarTest
         HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(32);
         map.InitializeCell(new HexNavigationCell(1));
 
-
         AddHighCostArea(map);
         AddBarrier(map, -10, -20, 15, -9, -5);
         AddBarrier(map, 0, -24, 24, 8, 12);
@@ -160,6 +156,16 @@ public static class HexAStarTest
             {
                 map[point] = new HexNavigationCell(1, 1);
             }
+        }
+    }
+
+    private sealed class NavigationMoveCostProvider(HexGridCentral<HexNavigationCell> map) : IMoveCostProvider
+    {
+        /// <inheritdoc />
+        public double GetMoveCost(HexCubePoint destination)
+        {
+            HexNavigationCell cell = map[destination];
+            return cell.ObstacleApothemScale > 0 ? -1 : cell.TraversalMultiplier;
         }
     }
 

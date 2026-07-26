@@ -70,6 +70,11 @@ public sealed partial class HexGridCentral<TElement>(int radius) : IHexGrid<TEle
         return defaultValue;
     }
 
+    /// <summary>
+    /// 使用同一个元素值初始化网格中的所有单元.
+    /// 对于引用类型, 每个单元都会持有同一引用.
+    /// </summary>
+    /// <param name="element">要写入所有单元的元素值.</param>
     public void InitializeCell(TElement element)
     {
         for (int index = 0; index < InternalElements.Length; index++)
@@ -78,6 +83,11 @@ public sealed partial class HexGridCentral<TElement>(int radius) : IHexGrid<TEle
         }
     }
 
+    /// <summary>
+    /// 使用元素创建函数初始化网格中的所有单元.
+    /// 该函数会为每个单元调用一次, 可用于创建彼此独立的引用类型元素.
+    /// </summary>
+    /// <param name="element">为每个单元创建元素的函数.</param>
     public void InitializeCell(Func<TElement> element)
     {
         for (int index = 0; index < InternalElements.Length; index++)
