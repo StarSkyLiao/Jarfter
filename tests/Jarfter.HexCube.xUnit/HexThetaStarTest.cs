@@ -15,9 +15,9 @@ public sealed class HexThetaStarTest
     [Fact]
     public void FindPath_WhenDirectLineIsClear_ShouldReturnDirectPath()
     {
-        HexCubePoint start = new HexCubePoint(0, 0);
-        HexCubePoint goal = new HexCubePoint(6, -2);
-        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubePoint>());
+        HexCubeGridPoint start = new HexCubeGridPoint(0, 0);
+        HexCubeGridPoint goal = new HexCubeGridPoint(6, -2);
+        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubeGridPoint>());
         IPathfinder pathfinder = new IPathfinder.ThetaStar(IHeuristic.Euclidean.Instance, provider);
 
         PathfindingResult result = pathfinder.FindPath(start, goal);
@@ -33,13 +33,13 @@ public sealed class HexThetaStarTest
     [Fact]
     public void FindPath_WhenDirectLineIsBlocked_ShouldReturnDetour()
     {
-        HexCubePoint start = new HexCubePoint(0, 0);
-        HexCubePoint goal = new HexCubePoint(6, -2);
-        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubePoint> { new HexCubePoint(3, -1) });
+        HexCubeGridPoint start = new HexCubeGridPoint(0, 0);
+        HexCubeGridPoint goal = new HexCubeGridPoint(6, -2);
+        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubeGridPoint> { new HexCubeGridPoint(3, -1) });
         IPathfinder pathfinder = new IPathfinder.ThetaStar(IHeuristic.Euclidean.Instance, provider);
 
         PathfindingResult result = pathfinder.FindPath(start, goal);
-        IReadOnlyList<HexCubePoint> path = result.Path;
+        IReadOnlyList<HexCubeGridPoint> path = result.Path;
 
         Assert.True(result.IsSuccess);
         Assert.True(path.Count > 2);
@@ -56,9 +56,9 @@ public sealed class HexThetaStarTest
     [Fact]
     public void LazyThetaStar_FindPath_WhenDirectLineIsClear_ShouldReturnDirectPath()
     {
-        HexCubePoint start = new HexCubePoint(0, 0);
-        HexCubePoint goal = new HexCubePoint(6, -2);
-        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubePoint>());
+        HexCubeGridPoint start = new HexCubeGridPoint(0, 0);
+        HexCubeGridPoint goal = new HexCubeGridPoint(6, -2);
+        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubeGridPoint>());
         IPathfinder pathfinder = new IPathfinder.LazyThetaStar(IHeuristic.Euclidean.Instance, provider);
 
         PathfindingResult result = pathfinder.FindPath(start, goal);
@@ -74,13 +74,13 @@ public sealed class HexThetaStarTest
     [Fact]
     public void LazyThetaStar_FindPath_WhenDirectLineIsBlocked_ShouldReturnDetour()
     {
-        HexCubePoint start = new HexCubePoint(0, 0);
-        HexCubePoint goal = new HexCubePoint(6, -2);
-        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubePoint> { new HexCubePoint(3, -1) });
+        HexCubeGridPoint start = new HexCubeGridPoint(0, 0);
+        HexCubeGridPoint goal = new HexCubeGridPoint(6, -2);
+        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubeGridPoint> { new HexCubeGridPoint(3, -1) });
         IPathfinder pathfinder = new IPathfinder.LazyThetaStar(IHeuristic.Euclidean.Instance, provider);
 
         PathfindingResult result = pathfinder.FindPath(start, goal);
-        IReadOnlyList<HexCubePoint> path = result.Path;
+        IReadOnlyList<HexCubeGridPoint> path = result.Path;
 
         Assert.True(result.IsSuccess);
         Assert.True(path.Count > 2);
@@ -97,24 +97,24 @@ public sealed class HexThetaStarTest
     [Fact]
     public void FindPath_WhenDirectLineHasHigherCost_ShouldKeepCheaperDetour()
     {
-        HexCubePoint start = new HexCubePoint(0, 0);
-        HexCubePoint goal = new HexCubePoint(2, 0);
+        HexCubeGridPoint start = new HexCubeGridPoint(0, 0);
+        HexCubeGridPoint goal = new HexCubeGridPoint(2, 0);
         HexCubeArea2D highCostArea = new HexCubeArea2D(new HexCubePoint(1, 0), 0.25);
-        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubePoint>(), highCostArea);
+        TestNavigationProvider provider = new TestNavigationProvider(new HashSet<HexCubeGridPoint>(), highCostArea);
         IPathfinder pathfinder = new IPathfinder.ThetaStar(IHeuristic.Euclidean.Instance, provider);
 
         PathfindingResult result = pathfinder.FindPath(start, goal);
-        IReadOnlyList<HexCubePoint> path = result.Path;
+        IReadOnlyList<HexCubeGridPoint> path = result.Path;
 
         Assert.True(path.Count > 2);
         Assert.True(result.IsSuccess);
         Assert.True(result.TotalCost < provider.GetLineCost(new HexCubeLine2D(start, goal)));
     }
 
-    private sealed class TestNavigationProvider(IReadOnlySet<HexCubePoint> obstacles, HexCubeArea2D? highCostArea = null) : IThetaStarNavigationProvider
+    private sealed class TestNavigationProvider(IReadOnlySet<HexCubeGridPoint> obstacles, HexCubeArea2D? highCostArea = null) : IThetaStarNavigationProvider
     {
         /// <inheritdoc />
-        public double GetMoveCost(HexCubePoint destination)
+        public double GetMoveCost(HexCubeGridPoint destination)
         {
             if (highCostArea is { } area && area.Contains(destination)) return 3;
             return obstacles.Contains(destination) ? -1 : 1;
@@ -123,7 +123,7 @@ public sealed class HexThetaStarTest
         /// <inheritdoc />
         public bool HasLineOfSight(HexCubeLine2D line)
         {
-            foreach (HexCubePoint obstacle in obstacles)
+            foreach (HexCubeGridPoint obstacle in obstacles)
             {
                 HexCubeArea2D area = new HexCubeArea2D(obstacle, 1);
                 if (area.IntersectsHex(line)) return false;

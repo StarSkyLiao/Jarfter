@@ -6,11 +6,11 @@ namespace Jarfter.HexCube.Grids;
 
 public partial class HexGridCentral<TElement>
 {
-    private static HexCubePoint FromIndex(int index)
+    private static HexCubeGridPoint FromIndex(int index)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(index);
 
-        if (index == 0) return HexCubePoint.Zero;
+        if (index == 0) return HexCubeGridPoint.Zero;
 
         // 找到 index 所在的环。
         //
@@ -70,15 +70,13 @@ public partial class HexGridCentral<TElement>
                 throw new UnreachableException();
         }
 
-        return new HexCubePoint(q, r);
+        return new HexCubeGridPoint(q, r);
     }
 
-    private static int ToIndex(HexCubePoint cubePoint)
+    private static int ToIndex(HexCubeGridPoint cubePoint)
     {
-        int q = (int)cubePoint.Q;
-        int r = (int)cubePoint.R;
-        ArgumentOutOfRangeException.ThrowIfNotEqual(q, cubePoint.Q);
-        ArgumentOutOfRangeException.ThrowIfNotEqual(r, cubePoint.R);
+        int q = cubePoint.Q;
+        int r = cubePoint.R;
         int s = -q - r;
 
         int ring = Math.Max(q.Abs(), Math.Max(r.Abs(), s.Abs()));

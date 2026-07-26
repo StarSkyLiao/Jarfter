@@ -3,7 +3,7 @@ using Jarfter.HexCube.Numerics;
 namespace Jarfter.HexCube.Grids;
 
 /// <summary>
-/// 定义以整数六边形坐标索引的地图查询接口.
+/// 定义以整数六边形网格坐标索引的离散地图查询接口.
 /// </summary>
 /// <typeparam name="T">地图单元存储的值类型.</typeparam>
 public interface IHexGrid<T>
@@ -18,14 +18,14 @@ public interface IHexGrid<T>
     /// </summary>
     /// <param name="position">地图坐标.</param>
     /// <returns>指定坐标上的值.</returns>
-    T this[HexCubePoint position] { get; }
+    T this[HexCubeGridPoint position] { get; }
 
     /// <summary>
     /// 判断地图中是否存在指定坐标.
     /// </summary>
     /// <param name="position">要判断的地图坐标.</param>
     /// <returns>当地图中存在指定坐标时返回 true, 否则返回 false.</returns>
-    bool Contains(HexCubePoint position);
+    bool Contains(HexCubeGridPoint position);
 
     /// <summary>
     /// 尝试获取指定坐标上的值.
@@ -33,7 +33,7 @@ public interface IHexGrid<T>
     /// <param name="position">地图坐标.</param>
     /// <param name="value">获取到的单元值.</param>
     /// <returns>当地图中存在指定坐标时返回 true, 否则返回 false.</returns>
-    bool TryGetValue(HexCubePoint position, out T? value);
+    bool TryGetValue(HexCubeGridPoint position, out T? value);
 
     /// <summary>
     /// 尝试获取指定坐标上的值.
@@ -41,5 +41,5 @@ public interface IHexGrid<T>
     /// <param name="position">地图坐标.</param>
     /// <param name="defaultValue">获取失败时的默认值.</param>
     /// <returns>当地图中存在指定坐标时返回值, 否则返回默认值.</returns>
-    T? GetValueOrDefault(HexCubePoint position, T? defaultValue = default);
+    T? GetValueOrDefault(HexCubeGridPoint position, T? defaultValue = default);
 }

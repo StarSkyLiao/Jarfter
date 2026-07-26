@@ -7,14 +7,14 @@ namespace Jarfter.HexCube.xUnit;
 
 internal static class HexPathfindingConfig
 {
-    internal static readonly HexCubePoint Start = new HexCubePoint(-20, 0);
-    internal static readonly HexCubePoint Goal = new HexCubePoint(20, 0);
+    internal static readonly HexCubeGridPoint Start = new HexCubeGridPoint(-20, 0);
+    internal static readonly HexCubeGridPoint Goal = new HexCubeGridPoint(20, 0);
     internal static readonly HexGridCentral<HexNavigationCell> HexMap = CreateSnapshot();
     internal static readonly HexGridThetaStarNavigationProvider NavigationProvider =
         new HexGridThetaStarNavigationProvider(HexMap);
 
     internal static Bitmap RenderMap(HexGridCentral<HexNavigationCell> map,
-        IReadOnlyList<HexCubePoint> path, Color32 pathColor)
+        IReadOnlyList<HexCubeGridPoint> path, Color32 pathColor)
     {
         const int hexRadius = 10;
         const int margin = hexRadius + 4;
@@ -30,7 +30,7 @@ internal static class HexPathfindingConfig
         {
             for (int r = -map.Radius; r <= map.Radius; r++)
             {
-                HexCubePoint point = new HexCubePoint(q, r);
+                HexCubeGridPoint point = new HexCubeGridPoint(q, r);
                 if (!map.Contains(point)) continue;
 
                 HexNavigationCell cell = map[point];
@@ -54,7 +54,7 @@ internal static class HexPathfindingConfig
         bitmap.DrawRegularHexagon(ToPixel(path[^1]), hexRadius, new Color32(185, 28, 28), new Color32(252, 165, 165), 2);
         return bitmap;
 
-        (int x, int y) ToPixel(HexCubePoint point) =>
+        (int x, int y) ToPixel(HexCubeGridPoint point) =>
         (
             margin + (int)Math.Round(map.Radius * horizontalSpacing + (point.Q + point.R / 2) * horizontalSpacing),
             margin + (int)Math.Round(map.Radius * verticalSpacing + point.R * verticalSpacing)
@@ -89,7 +89,7 @@ internal static class HexPathfindingConfig
         {
             for (int r = -3; r <= 3; r++)
             {
-                HexCubePoint point = new HexCubePoint(q, r);
+                HexCubeGridPoint point = new HexCubeGridPoint(q, r);
 
                 if (map.Contains(point))
                 {
@@ -109,7 +109,7 @@ internal static class HexPathfindingConfig
                 continue;
             }
 
-            HexCubePoint point = new HexCubePoint(q, r);
+            HexCubeGridPoint point = new HexCubeGridPoint(q, r);
 
             if (map.Contains(point))
             {
@@ -126,7 +126,7 @@ internal static class HexPathfindingConfig
         {
             for (int r = -map.Radius; r <= map.Radius; r++)
             {
-                HexCubePoint point = new HexCubePoint(q, r);
+                HexCubeGridPoint point = new HexCubeGridPoint(q, r);
                 if (!map.TryGetValue(point, out HexNavigationCell cell)) continue;
                 if (cell.ObstacleApothemScale > 0 || point.HexDistanceTo(Start) <= 2 || point.HexDistanceTo(Goal) <= 2) continue;
 

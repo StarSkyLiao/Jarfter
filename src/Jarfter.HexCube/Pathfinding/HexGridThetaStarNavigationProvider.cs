@@ -32,7 +32,7 @@ public sealed class HexGridThetaStarNavigationProvider : IThetaStarNavigationPro
     public bool UsesUniformTraversalCost { get; }
 
     /// <inheritdoc />
-    public double GetMoveCost(HexCubePoint destination)
+    public double GetMoveCost(HexCubeGridPoint destination)
     {
         if (!m_Map.TryGetValue(destination, out HexNavigationCell cell)) return -1;
         return cell.ObstacleApothemScale > 0 ? -1 : cell.TraversalMultiplier;
@@ -65,7 +65,7 @@ public sealed class HexGridThetaStarNavigationProvider : IThetaStarNavigationPro
         {
             for (int r = -source.Radius; r <= source.Radius; r++)
             {
-                HexCubePoint position = new HexCubePoint(q, r);
+                HexCubeGridPoint position = new HexCubeGridPoint(q, r);
                 if (source.TryGetValue(position, out HexNavigationCell cell)) snapshot[position] = cell;
             }
         }
@@ -97,7 +97,7 @@ public sealed class HexGridThetaStarNavigationProvider : IThetaStarNavigationPro
             {
                 for (int r = -map.Radius; r <= map.Radius; r++)
                 {
-                    HexCubePoint position = new HexCubePoint(q, r);
+                    HexCubeGridPoint position = new HexCubeGridPoint(q, r);
                     if (!map.TryGetValue(position, out HexNavigationCell cell) || cell.ObstacleApothemScale <= 0) continue;
 
                     if (!areasByQ.TryGetValue(q, out List<HexCubeArea2D>? areas))
@@ -163,7 +163,7 @@ public sealed class HexGridThetaStarNavigationProvider : IThetaStarNavigationPro
             {
                 for (int r = -map.Radius; r <= map.Radius; r++)
                 {
-                    HexCubePoint position = new HexCubePoint(q, r);
+                    HexCubeGridPoint position = new HexCubeGridPoint(q, r);
                     if (!map.TryGetValue(position, out HexNavigationCell cell) || cell.TraversalMultiplier <= 1) continue;
 
                     // 边长为 0.5 的区域恰好对应一个网格单元, 用于按实际穿过长度计算地形代价.

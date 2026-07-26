@@ -16,5 +16,5 @@ public interface IMoveCostProvider
     /// </summary>
     /// <param name="destination">即将进入的六边形坐标.</param>
     /// <returns>有限的移动代价; 非负值表示可通行, 负值表示该坐标不可通行.</returns>
-    double GetMoveCost(HexCubePoint destination);
+    double GetMoveCost(HexCubeGridPoint destination);
 }

@@ -13,5 +13,5 @@ public partial interface IPathfinder
     /// <param name="start">路径的起点.</param>
     /// <param name="goal">路径的终点.</param>
     /// <returns>包含路径及其总代价的搜索结果; 不存在可达路径时返回 <see cref="PathfindingResult.Empty"/>.</returns>
-    PathfindingResult FindPath(HexCubePoint start, HexCubePoint goal);
+    PathfindingResult FindPath(HexCubeGridPoint start, HexCubeGridPoint goal);
 }

@@ -10,7 +10,7 @@ public interface IHeuristic
     /// <summary>
     /// 计算当前点到目标点的启发价值.
     /// </summary>
-    double Calculate(HexCubePoint current, HexCubePoint target);
+    double Calculate(HexCubeGridPoint current, HexCubeGridPoint target);
 
     /// <summary>
     /// 提供默认的启发函数实现.
@@ -23,7 +23,7 @@ public interface IHeuristic
         public static readonly Default Instance = new Default();
 
         /// <inheritdoc />
-        public double Calculate(HexCubePoint current, HexCubePoint target)
+        public double Calculate(HexCubeGridPoint current, HexCubeGridPoint target)
         {
             double dq = current.Q - target.Q;
             double dr = current.R - target.R;
@@ -47,9 +47,9 @@ public interface IHeuristic
         public static readonly Euclidean Instance = new Euclidean();
 
         /// <inheritdoc />
-        public double Calculate(HexCubePoint current, HexCubePoint target)
+        public double Calculate(HexCubeGridPoint current, HexCubeGridPoint target)
         {
-            return current.DistanceTo(target);
+            return ((HexCubePoint)current).DistanceTo(target);
         }
 
         private Euclidean(){}

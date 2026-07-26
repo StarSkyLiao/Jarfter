@@ -35,21 +35,21 @@ public sealed partial class HexGridCentral<TElement>(int radius) : IHexGrid<TEle
     public ReadOnlySpan<TElement> Elements => InternalElements;
 
     /// <inheritdoc />
-    public TElement this[HexCubePoint cubePoint]
+    public TElement this[HexCubeGridPoint cubePoint]
     {
         get => InternalElements[ToIndex(cubePoint)];
         set => InternalElements[ToIndex(cubePoint)] = value;
     }
 
     /// <inheritdoc />
-    public bool Contains(HexCubePoint position)
+    public bool Contains(HexCubeGridPoint position)
     {
         int index = ToIndex(position);
         return index >= 0 && index < Count;
     }
 
     /// <inheritdoc />
-    public bool TryGetValue(HexCubePoint position, out TElement? value)
+    public bool TryGetValue(HexCubeGridPoint position, out TElement? value)
     {
         int index = ToIndex(position);
         if (index < 0 || index >= Count)
@@ -63,7 +63,7 @@ public sealed partial class HexGridCentral<TElement>(int radius) : IHexGrid<TEle
     }
 
     /// <inheritdoc />
-    public TElement? GetValueOrDefault(HexCubePoint position, TElement? defaultValue = default)
+    public TElement? GetValueOrDefault(HexCubeGridPoint position, TElement? defaultValue = default)
     {
         int index = ToIndex(position);
         if (index >= 0 && index < Count) return InternalElements[index];

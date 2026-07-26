@@ -18,7 +18,7 @@ public sealed class HexGridThetaStarNavigationProviderTest
     {
         HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(1);
         map.InitializeCell(new HexNavigationCell());
-        HexCubePoint destination = new HexCubePoint(1, 0);
+        HexCubeGridPoint destination = new HexCubeGridPoint(1, 0);
         HexGridThetaStarNavigationProvider provider = new HexGridThetaStarNavigationProvider(map);
 
         map[destination] = new HexNavigationCell(3, 1);
@@ -38,12 +38,12 @@ public sealed class HexGridThetaStarNavigationProviderTest
     {
         HexGridCentral<HexNavigationCell> map = new HexGridCentral<HexNavigationCell>(2);
         map.InitializeCell(new HexNavigationCell());
-        HexCubePoint obstacle = new HexCubePoint(1, 0);
+        HexCubeGridPoint obstacle = new HexCubeGridPoint(1, 0);
         map[obstacle] = new HexNavigationCell(1, 1);
         HexGridThetaStarNavigationProvider provider = new HexGridThetaStarNavigationProvider(map);
 
         Assert.Equal(-1, provider.GetMoveCost(obstacle));
-        Assert.False(provider.TryGetLineCost(new HexCubeLine2D(HexCubePoint.Zero, new HexCubePoint(2, 0)), out _));
+        Assert.False(provider.TryGetLineCost(new HexCubeLine2D(HexCubePoint.Zero, new HexCubeGridPoint(2, 0)), out _));
     }
 
 }

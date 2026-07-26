@@ -58,7 +58,7 @@ public static class HexThetaStarRunTest
     /// <param name="algorithmName">用于控制台输出的算法名称.</param>
     internal static void SaveResult(PathfindingResult result, string fileName, Color32 pathColor, string algorithmName)
     {
-        IReadOnlyList<HexCubePoint> path = result.Path;
+        IReadOnlyList<HexCubeGridPoint> path = result.Path;
         string filePath = Path.Combine(fileName);
 
         BitmapExtension.SaveAsBmp(HexPathfindingConfig.RenderMap(

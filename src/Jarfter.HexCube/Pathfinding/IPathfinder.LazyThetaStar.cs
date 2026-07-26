@@ -20,25 +20,25 @@ public partial interface IPathfinder
         /// <param name="start">路径的起点.</param>
         /// <param name="goal">路径的目标点.</param>
         /// <returns>包含从起点到目标点的路径及其总代价的搜索结果.</returns>
-        public PathfindingResult FindPath(HexCubePoint start, HexCubePoint goal)
+        public PathfindingResult FindPath(HexCubeGridPoint start, HexCubeGridPoint goal)
         {
-            PriorityQueue<(HexCubePoint point, double pathCost), double> open =
-                Factory.RentPriorityQueue<(HexCubePoint point, double pathCost), double>();
-            Dictionary<HexCubePoint, HexCubePoint> cameFrom =
-                Factory.RentDictionary<Dictionary<HexCubePoint, HexCubePoint>>();
-            Dictionary<HexCubePoint, double> gScore =
-                Factory.RentDictionary<Dictionary<HexCubePoint, double>>();
-            Dictionary<HexCubePoint, HexCubePoint> localParents =
-                Factory.RentDictionary<Dictionary<HexCubePoint, HexCubePoint>>();
-            Dictionary<HexCubePoint, byte> closed =
-                Factory.RentDictionary<Dictionary<HexCubePoint, byte>>();
+            PriorityQueue<(HexCubeGridPoint point, double pathCost), double> open =
+                Factory.RentPriorityQueue<(HexCubeGridPoint point, double pathCost), double>();
+            Dictionary<HexCubeGridPoint, HexCubeGridPoint> cameFrom =
+                Factory.RentDictionary<Dictionary<HexCubeGridPoint, HexCubeGridPoint>>();
+            Dictionary<HexCubeGridPoint, double> gScore =
+                Factory.RentDictionary<Dictionary<HexCubeGridPoint, double>>();
+            Dictionary<HexCubeGridPoint, HexCubeGridPoint> localParents =
+                Factory.RentDictionary<Dictionary<HexCubeGridPoint, HexCubeGridPoint>>();
+            Dictionary<HexCubeGridPoint, byte> closed =
+                Factory.RentDictionary<Dictionary<HexCubeGridPoint, byte>>();
 
             try
             {
                 gScore[start] = 0;
                 open.Enqueue((start, 0), heuristic.Calculate(start, goal));
 
-                while (open.TryDequeue(out (HexCubePoint point, double pathCost) entry, out _))
+                while (open.TryDequeue(out (HexCubeGridPoint point, double pathCost) entry, out _))
                 {
                     // ReSharper disable once CompareOfFloatsByEqualityOperator
                     if (!gScore.TryGetValue(entry.point, out double currentG) || currentG != entry.pathCost) continue;
@@ -48,7 +48,7 @@ public partial interface IPathfinder
 
                     closed.Add(entry.point, 0);
 
-                    foreach (HexCubePoint neighbor in entry.point.Neighbors)
+                    foreach (HexCubeGridPoint neighbor in entry.point.Neighbors)
                     {
                         if (closed.ContainsKey(neighbor)) continue;
 
@@ -59,7 +59,7 @@ public partial interface IPathfinder
                         if (gScore.TryGetValue(neighbor, out double oldG) && !(tentativeG < oldG)) continue;
 
                         // 延迟到邻居出队时再验证父节点连线, 避免对每个扩展边立即执行 LOS.
-                        cameFrom[neighbor] = cameFrom.TryGetValue(entry.point, out HexCubePoint parent) ? parent : entry.point;
+                        cameFrom[neighbor] = cameFrom.TryGetValue(entry.point, out HexCubeGridPoint parent) ? parent : entry.point;
                         localParents[neighbor] = entry.point;
                         gScore[neighbor] = tentativeG;
                         double f = tentativeG + heuristic.Calculate(neighbor, goal);
@@ -90,14 +90,14 @@ public partial interface IPathfinder
         /// <param name="currentG">验证后到达 <paramref name="current"/> 的代价.</param>
         /// <returns>当前节点可以通过已验证路径到达时返回 true, 否则返回 false.</returns>
         private bool TryValidateVertex(
-            HexCubePoint current,
-            Dictionary<HexCubePoint, HexCubePoint> cameFrom,
-            Dictionary<HexCubePoint, HexCubePoint> localParents,
-            Dictionary<HexCubePoint, double> gScore,
-            Dictionary<HexCubePoint, byte> closed,
+            HexCubeGridPoint current,
+            Dictionary<HexCubeGridPoint, HexCubeGridPoint> cameFrom,
+            Dictionary<HexCubeGridPoint, HexCubeGridPoint> localParents,
+            Dictionary<HexCubeGridPoint, double> gScore,
+            Dictionary<HexCubeGridPoint, byte> closed,
             out double currentG)
         {
-            if (!localParents.TryGetValue(current, out HexCubePoint localParent))
+            if (!localParents.TryGetValue(current, out HexCubeGridPoint localParent))
             {
                 currentG = gScore[current];
                 return true;
@@ -111,10 +111,10 @@ public partial interface IPathfinder
             }
 
             bool hasCandidate = false;
-            HexCubePoint bestParent = default;
+            HexCubeGridPoint bestParent = default;
             double bestG = 0;
 
-            if (cameFrom.TryGetValue(current, out HexCubePoint parent))
+            if (cameFrom.TryGetValue(current, out HexCubeGridPoint parent))
             {
                 HexCubeLine2D parentLine = new HexCubeLine2D(parent, current);
 
@@ -146,7 +146,7 @@ public partial interface IPathfinder
             // 当乐观父节点和实际普通前驱都不可用时, 才枚举其余已关闭邻居.
             if (!hasCandidate)
             {
-                foreach (HexCubePoint neighbor in current.Neighbors)
+                foreach (HexCubeGridPoint neighbor in current.Neighbors)
                 {
                     if (neighbor == localParent || !closed.ContainsKey(neighbor)) continue;
 
@@ -179,11 +179,11 @@ public partial interface IPathfinder
         /// <summary>
         /// 回溯生成路径.
         /// </summary>
-        private static List<HexCubePoint> ReconstructPath(Dictionary<HexCubePoint, HexCubePoint> cameFrom, HexCubePoint current)
+        private static List<HexCubeGridPoint> ReconstructPath(Dictionary<HexCubeGridPoint, HexCubeGridPoint> cameFrom, HexCubeGridPoint current)
         {
-            List<HexCubePoint> path = [current];
+            List<HexCubeGridPoint> path = [current];
 
-            while (cameFrom.TryGetValue(current, out HexCubePoint parent))
+            while (cameFrom.TryGetValue(current, out HexCubeGridPoint parent))
             {
                 current = parent;
                 path.Add(current);

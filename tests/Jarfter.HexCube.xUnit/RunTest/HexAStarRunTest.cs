@@ -21,7 +21,7 @@ public static class HexAStarRunTest
     public static void RunResult()
     {
         PathfindingResult result = Run();
-        IReadOnlyList<HexCubePoint> path = result.Path;
+        IReadOnlyList<HexCubeGridPoint> path = result.Path;
         string filePath = Path.Combine("HexAStarPath.bmp");
 
         BitmapExtension.SaveAsBmp(RenderMap(HexPathfindingConfig.HexMap, path), filePath);
@@ -40,7 +40,7 @@ public static class HexAStarRunTest
         return s_Pathfinder.FindPath(HexPathfindingConfig.Start, HexPathfindingConfig.Goal);
     }
 
-    private static Bitmap RenderMap(HexGridCentral<HexNavigationCell> map, IReadOnlyList<HexCubePoint> path)
+    private static Bitmap RenderMap(HexGridCentral<HexNavigationCell> map, IReadOnlyList<HexCubeGridPoint> path)
     {
         const int hexRadius = 10;
         const int margin = hexRadius + 4;
@@ -56,7 +56,7 @@ public static class HexAStarRunTest
         {
             for (int r = -map.Radius; r <= map.Radius; r++)
             {
-                HexCubePoint point = new HexCubePoint(q, r);
+                HexCubeGridPoint point = new HexCubeGridPoint(q, r);
                 if (!map.Contains(point)) continue;
 
                 HexNavigationCell cell = map[point];
@@ -80,7 +80,7 @@ public static class HexAStarRunTest
         bitmap.DrawRegularHexagon(ToPixel(path[^1]), hexRadius, new Color32(185, 28, 28), new Color32(252, 165, 165), 2);
         return bitmap;
 
-        (int x, int y) ToPixel(HexCubePoint point) =>
+        (int x, int y) ToPixel(HexCubeGridPoint point) =>
         (
             margin + (int)Math.Round(map.Radius * horizontalSpacing + (point.Q + point.R / 2) * horizontalSpacing),
             margin + (int)Math.Round(map.Radius * verticalSpacing + point.R * verticalSpacing)
