@@ -6,7 +6,6 @@ namespace Jarfter.NavMesh.Query;
 /// </summary>
 public sealed class NavMeshQueryOptions
 {
-    private double m_HeuristicWeight = 1;
 
     /// <summary>
     /// 获取或设置 A* 启发式权重.
@@ -14,12 +13,12 @@ public sealed class NavMeshQueryOptions
     /// </summary>
     public double HeuristicWeight
     {
-        get => m_HeuristicWeight;
+        get;
         set
         {
             if (!double.IsFinite(value) || value < 1)
                 throw new ArgumentOutOfRangeException(nameof(value), "启发式权重必须是大于等于 1 的有限 double 值.");
-            m_HeuristicWeight = value;
+            field = value;
         }
-    }
+    } = 1;
 }

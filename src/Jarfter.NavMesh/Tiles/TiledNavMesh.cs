@@ -18,9 +18,8 @@ public sealed class TiledNavMesh
         new Dictionary<NavMeshTileId, TiledNavMeshTile>();
     private readonly Dictionary<TiledNavMeshEdgeKey, PortalOwners> m_PortalOwners =
         new Dictionary<TiledNavMeshEdgeKey, PortalOwners>();
-    private readonly List<TiledNavMeshPortal> m_Portals = new List<TiledNavMeshPortal>();
+    private readonly List<TiledNavMeshPortal> m_Portals = [];
     private NavMeshJumpConnection[] m_CrossTileJumpConnections = [];
-    private TiledNavMeshSnapshot? m_TileSnapshot;
     private Mesh? m_Snapshot;
 
     /// <summary>
@@ -38,13 +37,13 @@ public sealed class TiledNavMesh
     /// 此属性首次读取或 tile 更新后首次读取时才会物化全局网格. 新代码应优先使用
     /// <see cref="TileSnapshot"/>, 以避免局部更新后立即进行全量重建.
     /// </summary>
-    public Mesh? Snapshot => m_TileSnapshot is null ? null : m_Snapshot ??= BuildCompatibilitySnapshot(m_TileSnapshot);
+    public Mesh? Snapshot => TileSnapshot is null ? null : m_Snapshot ??= BuildCompatibilitySnapshot(TileSnapshot);
 
     /// <summary>
     /// 获取由已装载 tile 组成的不可变组合快照.
     /// 更新时仅复用未变更 tile 的网格引用, 不会合并 polygon 或重建全局 BVH.
     /// </summary>
-    public TiledNavMeshSnapshot? TileSnapshot => m_TileSnapshot;
+    public TiledNavMeshSnapshot? TileSnapshot { get; private set; }
 
     /// <summary>
     /// 添加新 tile 或替换同一标识的旧 tile, 随后发布组合快照.
@@ -185,13 +184,13 @@ public sealed class TiledNavMesh
         m_PortalOwners.Clear();
         m_Portals.Clear();
         m_CrossTileJumpConnections = [];
-        m_TileSnapshot = null;
+        TileSnapshot = null;
         m_Snapshot = null;
     }
 
     private void PublishTileSnapshot()
     {
-        m_TileSnapshot = m_Tiles.Count == 0
+        TileSnapshot = m_Tiles.Count == 0
             ? null
             : new TiledNavMeshSnapshot(m_Tiles.Values, CollectionsMarshal.AsSpan(m_Portals), m_CrossTileJumpConnections);
         m_Snapshot = null;
@@ -411,12 +410,9 @@ public sealed class TiledNavMesh
 
     private readonly record struct PortalOwners(
         TiledNavMeshPortalEndpoint First,
-        TiledNavMeshPortalEndpoint Second,
-        byte Count)
+        TiledNavMeshPortalEndpoint Second = default,
+        byte Count = 1)
     {
-        public PortalOwners(TiledNavMeshPortalEndpoint first) : this(first, default, 1)
-        {
-        }
 
         public PortalOwners(TiledNavMeshPortalEndpoint first, TiledNavMeshPortalEndpoint second) : this(first, second,
             2)

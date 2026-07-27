@@ -28,8 +28,8 @@ public sealed class DynamicNavMesh
         ArgumentNullException.ThrowIfNull(input);
         m_Boundary = input.Boundary;
         m_Options = options ?? new NavMeshBuildOptions();
-        for (int index = 0; index < input.Obstacles.Count; index++)
-            m_Obstacles.Add(m_NextObstacleId++, input.Obstacles[index]);
+        foreach (NavMeshPolygon polygon in input.Obstacles)
+            m_Obstacles.Add(m_NextObstacleId++, polygon);
         m_Snapshot = BuildSnapshot();
     }
 
