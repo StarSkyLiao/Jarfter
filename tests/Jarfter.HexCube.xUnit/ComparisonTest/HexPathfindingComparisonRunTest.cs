@@ -14,7 +14,7 @@ public static class HexPathfindingComparisonRunTest
     /// </summary>
     public static void RunComparison()
     {
-        Benchmark.RunQuickTest(new BenchmarkOption(10) { TargetTime = TimeSpan.FromSeconds(0.15) }, [
+        Benchmark.RunQuickTest(new BenchmarkOption(10) { LoopCount = 10 }, [
             new MethodWrapper<PathfindingResult>(HexAStarRunTest.Run),
             new MethodWrapper<PathfindingResult>(HexWeightedAStarRunTest.Run),
             new MethodWrapper<PathfindingResult>(HexThetaStarRunTest.Run),

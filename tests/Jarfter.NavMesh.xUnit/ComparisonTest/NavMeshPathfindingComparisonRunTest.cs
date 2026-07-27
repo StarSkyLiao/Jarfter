@@ -40,7 +40,7 @@ public static class NavMeshPathfindingComparisonRunTest
     /// </summary>
     public static void RunComparison()
     {
-        Benchmark.RunQuickTest(new BenchmarkOption(10) { TargetTime = TimeSpan.FromSeconds(0.15) }, [
+        Benchmark.RunQuickTest(new BenchmarkOption(10) { LoopCount = 10 }, [
             new MethodWrapper<double>(RunHexAStar),
             new MethodWrapper<double>(RunNavMeshCorridorAStar)
         ]);
