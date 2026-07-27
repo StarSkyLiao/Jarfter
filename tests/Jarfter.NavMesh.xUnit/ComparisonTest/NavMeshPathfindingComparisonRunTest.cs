@@ -44,6 +44,11 @@ public static class NavMeshPathfindingComparisonRunTest
             //new MethodWrapper<double>(RunHexAStar),
             new MethodWrapper<double>(RunNavMeshCorridorAStar)
         ]);
+
+        Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.15) }, [
+            //new MethodWrapper<double>(RunHexAStar),
+            new MethodWrapper<ComparisonMap>(() => CreateNavMeshMap(s_HexMap))
+        ]);
     }
 
     /// <summary>

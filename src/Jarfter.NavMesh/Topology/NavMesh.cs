@@ -1436,17 +1436,11 @@ public sealed class NavMesh
         List<int> corridor, int first, int last)
     {
         List<int> section = Factory.RentList<int>();
-        try
-        {
-            for (int index = first; index <= last; index++) section.Add(corridor[index]);
-            NavMeshPoint[] sectionPoints = BuildStraightPath(start, goal, section, out _);
-            int skip = destination.Count == 0 ? 0 : 1;
-            for (int index = skip; index < sectionPoints.Length; index++) destination.Add(sectionPoints[index]);
-        }
-        finally
-        {
-            Factory.Release(section);
-        }
+        for (int index = first; index <= last; index++) section.Add(corridor[index]);
+        NavMeshPoint[] sectionPoints = BuildStraightPath(start, goal, section, out _);
+        int skip = destination.Count == 0 ? 0 : 1;
+        for (int index = skip; index < sectionPoints.Length; index++) destination.Add(sectionPoints[index]);
+        Factory.Release(section);
     }
 
     private NavMeshPoint[] BuildStraightPath(NavMeshPoint start, NavMeshPoint goal, List<int> corridor,
@@ -1454,78 +1448,74 @@ public sealed class NavMesh
     {
         jumps = [];
         List<Portal> portals = Factory.RentList<Portal>();
-        try
+
+        for (int index = 0; index < corridor.Count - 1; index++)
         {
-            for (int index = 0; index < corridor.Count - 1; index++)
-                portals.Add(GetPolygonPortal(corridor[index], corridor[index + 1]));
-            portals.Add(new Portal(goal, goal));
-            List<NavMeshPoint> result = Factory.RentList<NavMeshPoint>();
-            try
+            portals.Add(GetPolygonPortal(corridor[index], corridor[index + 1]));
+        }
+        portals.Add(new Portal(goal, goal));
+        List<NavMeshPoint> result = Factory.RentList<NavMeshPoint>();
+
+        result.Add(start);
+        NavMeshPoint apex = start;
+        NavMeshPoint left = portals[0].Left;
+        NavMeshPoint right = portals[0].Right;
+        int leftIndex = 0;
+        int rightIndex = 0;
+        for (int index = 1; index < portals.Count; index++)
+        {
+            Portal portal = portals[index];
+            int apexIndex;
+            if (NavMeshPoint.Cross(apex, right, portal.Right) <= 0)
             {
-                result.Add(start);
-                NavMeshPoint apex = start;
-                NavMeshPoint left = portals[0].Left;
-                NavMeshPoint right = portals[0].Right;
-                int leftIndex = 0;
-                int rightIndex = 0;
-                for (int index = 1; index < portals.Count; index++)
+                if (apex == right || NavMeshPoint.Cross(apex, left, portal.Right) > 0)
                 {
-                    Portal portal = portals[index];
-                    int apexIndex;
-                    if (NavMeshPoint.Cross(apex, right, portal.Right) <= 0)
-                    {
-                        if (apex == right || NavMeshPoint.Cross(apex, left, portal.Right) > 0)
-                        {
-                            right = portal.Right;
-                            rightIndex = index;
-                        }
-                        else
-                        {
-                            result.Add(left);
-                            apex = left;
-                            apexIndex = leftIndex;
-                            left = apex;
-                            right = apex;
-                            leftIndex = apexIndex;
-                            rightIndex = apexIndex;
-                            index = apexIndex;
-                            continue;
-                        }
-                    }
-
-                    if (NavMeshPoint.Cross(apex, left, portal.Left) >= 0)
-                    {
-                        if (apex == left || NavMeshPoint.Cross(apex, right, portal.Left) < 0)
-                        {
-                            left = portal.Left;
-                            leftIndex = index;
-                        }
-                        else
-                        {
-                            result.Add(right);
-                            apex = right;
-                            apexIndex = rightIndex;
-                            left = apex;
-                            right = apex;
-                            leftIndex = apexIndex;
-                            rightIndex = apexIndex;
-                            index = apexIndex;
-                        }
-                    }
+                    right = portal.Right;
+                    rightIndex = index;
                 }
+                else
+                {
+                    result.Add(left);
+                    apex = left;
+                    apexIndex = leftIndex;
+                    left = apex;
+                    right = apex;
+                    leftIndex = apexIndex;
+                    rightIndex = apexIndex;
+                    index = apexIndex;
+                    continue;
+                }
+            }
 
-                if (result[^1] != goal) result.Add(goal);
-                return result.ToArray();
-            }
-            finally
+            if (NavMeshPoint.Cross(apex, left, portal.Left) >= 0)
             {
-                Factory.Release(result);
+                if (apex == left || NavMeshPoint.Cross(apex, right, portal.Left) < 0)
+                {
+                    left = portal.Left;
+                    leftIndex = index;
+                }
+                else
+                {
+                    result.Add(right);
+                    apex = right;
+                    apexIndex = rightIndex;
+                    left = apex;
+                    right = apex;
+                    leftIndex = apexIndex;
+                    rightIndex = apexIndex;
+                    index = apexIndex;
+                }
             }
         }
-        finally
-        {
-            Factory.Release(portals);
-        }
+
+        if (result[^1] != goal) result.Add(goal);
+
+        NavMeshPoint[] resultArray = [.. result];
+
+        Factory.Release(result);
+        Factory.Release(portals);
+
+        return resultArray;
     }
 
     private double CalculatePathCost(ReadOnlySpan<NavMeshPoint> points, ReadOnlySpan<NavMeshJumpTraversal> jumps,
@@ -1631,8 +1621,11 @@ public sealed class NavMesh
         double edgeX = second.X - first.X;
         double edgeY = second.Y - first.Y;
         double inverseLength = 1 / Math.Sqrt(edgeX * edgeX + edgeY * edgeY);
-        return new NavMeshRaycastHit(t, new NavMeshPoint(start.X + (end.X - start.X) * t,
-            start.Y + (end.Y - start.Y) * t), new NavMeshPoint(edgeY * inverseLength, -edgeX * inverseLength));
+        return new NavMeshRaycastHit(t,
+            new NavMeshPoint(start.X + (end.X - start.X) * t,
+                start.Y + (end.Y - start.Y) * t),
+            new NavMeshPoint(edgeY * inverseLength, -edgeX * inverseLength)
+        );
     }
 
     private static bool TryIntersectSegment(NavMeshPoint rayStart, NavMeshPoint rayEnd, NavMeshPoint edgeStart,
@@ -1967,14 +1960,17 @@ public sealed class NavMesh
     {
         return new NavMeshPoint(
             (vertices[triangle.First].X + vertices[triangle.Second].X + vertices[triangle.Third].X) / 3,
-            (vertices[triangle.First].Y + vertices[triangle.Second].Y + vertices[triangle.Third].Y) / 3);
+            (vertices[triangle.First].Y + vertices[triangle.Second].Y + vertices[triangle.Third].Y) / 3
+        );
     }
 
     private double TriangleArea(int triangleIndex)
     {
         NavMeshTriangle triangle = m_Triangles[triangleIndex];
-        return NavMeshPoint.Cross(m_Vertices[triangle.First], m_Vertices[triangle.Second],
-            m_Vertices[triangle.Third]) * 0.5;
+        return 0.5 * NavMeshPoint.Cross(
+            m_Vertices[triangle.First], m_Vertices[triangle.Second],
+            m_Vertices[triangle.Third]
+        );
     }
 
     private double PolygonArea(int polygonIndex)
@@ -2112,11 +2108,12 @@ public sealed class NavMesh
     private static PolygonNeighbor[][] BuildPolygonNeighbors(ReadOnlySpan<PolygonInfo> polygons)
     {
         List<PolygonNeighbor>[] neighbors = new List<PolygonNeighbor>[polygons.Length];
-        Dictionary<Edge, PolygonEdge> owners = new Dictionary<Edge, PolygonEdge>();
-        HashSet<Edge> paired = new HashSet<Edge>();
+        Dictionary<Edge, PolygonEdge> owners = Factory.RentDictionary<Dictionary<Edge, PolygonEdge>>();
+        HashSet<Edge> paired = Factory.RentCollection<HashSet<Edge>, Edge>();
+
         for (int polygonIndex = 0; polygonIndex < polygons.Length; polygonIndex++)
         {
-            neighbors[polygonIndex] = new List<PolygonNeighbor>();
+            neighbors[polygonIndex] = Factory.RentList<PolygonNeighbor>();
             ReadOnlySpan<int> vertices = polygons[polygonIndex].Vertices;
             for (int edgeIndex = 0; edgeIndex < vertices.Length; edgeIndex++)
             {
@@ -2139,8 +2136,15 @@ public sealed class NavMesh
             }
         }
 
+        Factory.Release<HashSet<Edge>, Edge>(paired);
+        Factory.ReleaseDictionary(owners);
+
         PolygonNeighbor[][] result = new PolygonNeighbor[neighbors.Length][];
-        for (int index = 0; index < result.Length; index++) result[index] = neighbors[index].ToArray();
+        for (int index = 0; index < result.Length; index++)
+        {
+            result[index] = [.. neighbors[index]];
+            Factory.Release(neighbors[index]);
+        }
         return result;
     }
 
@@ -2159,11 +2163,8 @@ public sealed class NavMesh
 
     private static PolygonInfo CreatePolygonInfo(int[] polygonVertices, int areaId, uint flags, NavMeshPoint[] vertices)
     {
-        NavMeshPoint first = vertices[polygonVertices[0]];
-        double minX = first.X;
-        double minY = first.Y;
-        double maxX = first.X;
-        double maxY = first.Y;
+        (double minX, double minY) = vertices[polygonVertices[0]];
+        (double maxX, double maxY) = (minX, minY);
         double twiceArea = 0;
         for (int index = 0; index < polygonVertices.Length; index++)
         {
@@ -2173,8 +2174,10 @@ public sealed class NavMesh
             twiceArea += current.X * next.Y - current.Y * next.X;
         }
 
-        return new PolygonInfo(polygonVertices, areaId, flags, GetPolygonCenter(polygonVertices, vertices),
-            new NavMeshBounds(minX, minY, maxX, maxY), twiceArea * 0.5);
+        return new PolygonInfo(polygonVertices, areaId, flags,
+            GetPolygonCenter(polygonVertices, vertices),
+            new NavMeshBounds(minX, minY, maxX, maxY), twiceArea * 0.5
+        );
     }
 
     private static void ValidateConvexPolygon(ReadOnlySpan<int> indices, ReadOnlySpan<NavMeshPoint> vertices,
