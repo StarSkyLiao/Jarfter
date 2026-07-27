@@ -384,8 +384,11 @@ public sealed class TiledNavMesh
                     jumpConnections.Add(jumpConnection);
             }
 
-            return Mesh.Create(CollectionsMarshal.AsSpan(vertices), CollectionsMarshal.AsSpan(polygons),
-                CollectionsMarshal.AsSpan(jumpConnections));
+            return Mesh.Create(
+                CollectionsMarshal.AsSpan(vertices),
+                CollectionsMarshal.AsSpan(polygons),
+                CollectionsMarshal.AsSpan(jumpConnections)
+            );
         }
         finally
         {

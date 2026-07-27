@@ -1066,7 +1066,7 @@ public sealed class NavMesh
             centers[index] = GetTriangleCenter(copiedTriangles[index], copiedVertices);
         int[] bvhTriangles = new int[copiedTriangles.Length];
         for (int index = 0; index < bvhTriangles.Length; index++) bvhTriangles[index] = index;
-        List<BvhNode> bvhNodes = new List<BvhNode>();
+        List<BvhNode> bvhNodes = Factory.RentList<BvhNode>();
         BuildBvh(bvhTriangles, 0, bvhTriangles.Length, copiedVertices, copiedTriangles, bvhNodes);
         PolygonInfo[] polygons = BuildPolygons(copiedTriangles, copiedVertices, sourcePolygons);
         int[] trianglePolygons = sourceTrianglePolygons.IsEmpty
@@ -1075,16 +1075,25 @@ public sealed class NavMesh
         PolygonNeighbor[][] polygonNeighbors = BuildPolygonNeighbors(polygons);
         int[] bvhPolygons = new int[polygons.Length];
         for (int index = 0; index < bvhPolygons.Length; index++) bvhPolygons[index] = index;
-        List<BvhNode> polygonBvhNodes = new List<BvhNode>();
+        List<BvhNode> polygonBvhNodes = Factory.RentList<BvhNode>();
         BuildPolygonBvh(bvhPolygons, 0, bvhPolygons.Length, polygons, polygonBvhNodes);
         NavMeshJumpConnection[] copiedJumpConnections = jumpConnections.ToArray();
         HeuristicJump[] heuristicJumps = BuildHeuristicJumps(copiedJumpConnections);
         double[] heuristicJumpTransitionDistances = BuildHeuristicJumpTransitionDistances(heuristicJumps);
-        JumpEdge[][] jumpEdges = BuildJumpEdges(copiedJumpConnections, copiedTriangles, copiedVertices, trianglePolygons,
-            polygons.Length);
+        JumpEdge[][] jumpEdges = BuildJumpEdges(
+            copiedJumpConnections, copiedTriangles, copiedVertices, trianglePolygons,
+            polygons.Length
+        );
+
+        BvhNode[] polygonBvhArray = [.. polygonBvhNodes];
+        BvhNode[] bvhNodeArray = [.. bvhNodes];
+        Factory.Release(polygonBvhNodes);
+        Factory.Release(bvhNodes);
+
         return new NavMesh(copiedVertices, copiedTriangles, centers, neighbors, polygons, trianglePolygons,
             polygonNeighbors, jumpEdges, copiedJumpConnections, heuristicJumps, heuristicJumpTransitionDistances,
-            bvhNodes.ToArray(), bvhTriangles, polygonBvhNodes.ToArray(), bvhPolygons);
+            bvhNodeArray, bvhTriangles, polygonBvhArray, bvhPolygons
+        );
     }
 
     /// <summary>
@@ -2215,7 +2224,10 @@ public sealed class NavMesh
         NavMeshTriangle[] triangles, NavMeshPoint[] vertices, ReadOnlySpan<int> trianglePolygons, int polygonCount)
     {
         List<JumpEdge>[] lists = new List<JumpEdge>[polygonCount];
-        for (int index = 0; index < lists.Length; index++) lists[index] = [];
+        for (int index = 0; index < lists.Length; index++)
+        {
+            lists[index] = Factory.RentList<JumpEdge>();
+        }
         for (int connectionIndex = 0; connectionIndex < connections.Length; connectionIndex++)
         {
             NavMeshJumpConnection connection = connections[connectionIndex];
@@ -2242,7 +2254,11 @@ public sealed class NavMesh
         }
 
         JumpEdge[][] result = new JumpEdge[lists.Length][];
-        for (int index = 0; index < result.Length; index++) result[index] = lists[index].ToArray();
+        for (int index = 0; index < result.Length; index++)
+        {
+            result[index] = [.. lists[index]];
+            Factory.Release(lists[index]);
+        }
         return result;
     }
 
