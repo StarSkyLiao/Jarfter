@@ -27,7 +27,12 @@ public static class NavMeshBuildValidator
         try
         {
             for (int index = 0; index < input.Obstacles.Count; index++)
-                obstacles.Add(NormalizeRing(input.Obstacles[index], false, options.Tolerance, $"障碍物 {index}"));
+            {
+                NavMeshPolygon navMeshPolygon = NormalizeRing(
+                    input.Obstacles[index], false, options.Tolerance, $"障碍物 {index}"
+                );
+                obstacles.Add(navMeshPolygon);
+            }
             ValidateRingRelationships(boundary, obstacles, options.Tolerance);
             return new NavMeshBuildInput(boundary, obstacles);
         }
@@ -152,8 +157,8 @@ public static class NavMeshBuildValidator
             NavMeshPoint firstEnd = vertices[(firstIndex + 1) % vertices.Length];
             for (int secondIndex = firstIndex + 1; secondIndex < vertices.Length; secondIndex++)
             {
-                if (secondIndex == firstIndex + 1 || firstIndex == 0 && secondIndex == vertices.Length - 1)
-                    continue;
+                if (secondIndex == firstIndex + 1) continue;
+                if (firstIndex == 0 && secondIndex == vertices.Length - 1) continue;
                 NavMeshPoint secondStart = vertices[secondIndex];
                 NavMeshPoint secondEnd = vertices[(secondIndex + 1) % vertices.Length];
                 if (SegmentsIntersect(firstStart, firstEnd, secondStart, secondEnd, tolerance))
