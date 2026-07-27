@@ -10,4 +10,5 @@ public readonly record struct NavMeshJumpConnection(
     NavMeshPoint Start,
     NavMeshPoint End,
     double FixedCost,
-    bool IsBidirectional = false);
+    bool IsBidirectional = false
+);

@@ -16,7 +16,6 @@ public sealed class DynamicNavMesh
     private readonly NavMeshBuildOptions m_Options;
     private readonly Dictionary<int, NavMeshPolygon> m_Obstacles = new Dictionary<int, NavMeshPolygon>();
     private int m_NextObstacleId;
-    private Mesh m_Snapshot;
 
     /// <summary>
     /// 使用初始构建输入创建动态导航网格并立即构建首个快照.
@@ -30,13 +29,13 @@ public sealed class DynamicNavMesh
         m_Options = options ?? new NavMeshBuildOptions();
         foreach (NavMeshPolygon polygon in input.Obstacles)
             m_Obstacles.Add(m_NextObstacleId++, polygon);
-        m_Snapshot = BuildSnapshot();
+        Snapshot = BuildSnapshot();
     }
 
     /// <summary>
     /// 获取当前可供查询的不可变导航网格快照.
     /// </summary>
-    public Mesh Snapshot => m_Snapshot;
+    public Mesh Snapshot { get; private set; }
 
     /// <summary>
     /// 获取当前动态障碍物数量.
@@ -115,7 +114,7 @@ public sealed class DynamicNavMesh
     private void PublishRebuiltSnapshot()
     {
         Mesh snapshot = BuildSnapshot();
-        m_Snapshot = snapshot;
+        Snapshot = snapshot;
     }
 
     private Mesh BuildSnapshot()

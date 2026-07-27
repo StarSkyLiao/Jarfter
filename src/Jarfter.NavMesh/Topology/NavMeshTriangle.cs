@@ -9,4 +9,5 @@ public readonly record struct NavMeshTriangle(
     int Second,
     int Third,
     int AreaId = 0,
-    uint Flags = uint.MaxValue);
+    uint Flags = uint.MaxValue
+);

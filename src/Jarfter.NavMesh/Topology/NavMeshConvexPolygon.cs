@@ -16,7 +16,7 @@ public sealed class NavMeshConvexPolygon
     /// <param name="flags">供查询过滤器使用的可通行位掩码.</param>
     public NavMeshConvexPolygon(ReadOnlySpan<int> vertexIndices, int areaId = 0, uint flags = uint.MaxValue)
     {
-        m_VertexIndices = vertexIndices.ToArray();
+        m_VertexIndices = [.. vertexIndices];
         AreaId = areaId;
         Flags = flags;
     }

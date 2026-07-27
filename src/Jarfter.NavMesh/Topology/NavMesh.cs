@@ -2081,8 +2081,11 @@ public sealed class NavMesh
             for (int index = 0; index < triangles.Length; index++)
             {
                 NavMeshTriangle triangle = triangles[index];
-                result[index] = CreatePolygonInfo([triangle.First, triangle.Second, triangle.Third], triangle.AreaId,
-                    triangle.Flags, vertices);
+                result[index] = CreatePolygonInfo(
+                    [triangle.First, triangle.Second, triangle.Third],
+                    triangle.AreaId,
+                    triangle.Flags, vertices
+                );
             }
 
             return result;
@@ -2186,8 +2189,8 @@ public sealed class NavMesh
                 throw new ArgumentException($"多边形 {polygonIndex} 的顶点索引无效.");
             for (int other = index + 1; other < indices.Length; other++)
             {
-                if (current == indices[other])
-                    throw new ArgumentException($"多边形 {polygonIndex} 包含重复顶点索引.");
+                if (current != indices[other]) continue;
+                throw new ArgumentException($"多边形 {polygonIndex} 包含重复顶点索引.");
             }
         }
 
@@ -2209,7 +2212,7 @@ public sealed class NavMesh
         NavMeshTriangle[] triangles, NavMeshPoint[] vertices, ReadOnlySpan<int> trianglePolygons, int polygonCount)
     {
         List<JumpEdge>[] lists = new List<JumpEdge>[polygonCount];
-        for (int index = 0; index < lists.Length; index++) lists[index] = new List<JumpEdge>();
+        for (int index = 0; index < lists.Length; index++) lists[index] = [];
         for (int connectionIndex = 0; connectionIndex < connections.Length; connectionIndex++)
         {
             NavMeshJumpConnection connection = connections[connectionIndex];
@@ -2222,11 +2225,17 @@ public sealed class NavMesh
                 throw new ArgumentException($"跳跃连接 {connectionIndex} 的端点必须位于导航网格内.", nameof(connections));
             int startPolygon = trianglePolygons[startTriangle];
             int endPolygon = trianglePolygons[endTriangle];
-            lists[startPolygon].Add(new JumpEdge(endPolygon, connection.Start, connection.End, connection.FixedCost,
-                connectionIndex + 1));
-            if (connection.IsBidirectional)
-                lists[endPolygon].Add(new JumpEdge(startPolygon, connection.End, connection.Start, connection.FixedCost,
-                    -connectionIndex - 1));
+            lists[startPolygon].Add(new JumpEdge(
+                endPolygon,
+                connection.Start, connection.End,
+                connection.FixedCost, connectionIndex + 1
+            ));
+            if (!connection.IsBidirectional) continue;
+            lists[endPolygon].Add(new JumpEdge(
+                startPolygon,
+                connection.End, connection.Start,
+                connection.FixedCost, -connectionIndex - 1
+            ));
         }
 
         JumpEdge[][] result = new JumpEdge[lists.Length][];
@@ -2243,8 +2252,8 @@ public sealed class NavMesh
         foreach (NavMeshJumpConnection connection in connections)
         {
             result[index++] = new HeuristicJump(connection.Start, connection.End, connection.FixedCost);
-            if (connection.IsBidirectional)
-                result[index++] = new HeuristicJump(connection.End, connection.Start, connection.FixedCost);
+            if (!connection.IsBidirectional) continue;
+            result[index++] = new HeuristicJump(connection.End, connection.Start, connection.FixedCost);
         }
 
         return result;
@@ -2259,8 +2268,10 @@ public sealed class NavMesh
         {
             for (int nextIndex = 0; nextIndex < jumps.Length; nextIndex++)
             {
-                result[previousIndex * jumps.Length + nextIndex] = NavMeshPoint.Distance(jumps[previousIndex].End,
-                    jumps[nextIndex].Start);
+                result[previousIndex * jumps.Length + nextIndex] = NavMeshPoint.Distance(
+                    jumps[previousIndex].End,
+                    jumps[nextIndex].Start
+                );
             }
         }
 
@@ -2284,8 +2295,8 @@ public sealed class NavMesh
             double currentCost = double.PositiveInfinity;
             for (int index = 0; index < count; index++)
             {
-                if (workspace.JumpHeuristicClosed[index] || workspace.JumpHeuristicCosts[index] >= currentCost)
-                    continue;
+                if (workspace.JumpHeuristicClosed[index]) continue;
+                if (workspace.JumpHeuristicCosts[index] >= currentCost) continue;
                 current = index;
                 currentCost = workspace.JumpHeuristicCosts[index];
             }
@@ -2373,7 +2384,8 @@ public sealed class NavMesh
         uint Flags,
         NavMeshPoint Center,
         NavMeshBounds Bounds,
-        double Area);
+        double Area
+    );
 
     private readonly record struct PolygonEdge(int PolygonIndex, int FirstVertex, int SecondVertex);
 
@@ -2398,8 +2410,3 @@ public sealed class NavMesh
         int Left,
         int Right);
 }
-
-/// <summary>
-/// 表示按行进方向定向的二维 polygon 门户.
-/// </summary>
-internal readonly record struct NavMeshPortal(NavMeshPoint Left, NavMeshPoint Right);
