@@ -1672,6 +1672,16 @@ public sealed class NavMesh
         throw new InvalidOperationException("相邻多边形未共享一条边.");
     }
 
+    /// <summary>
+    /// 获取仅供同一程序集组合 funnel 使用的定向 polygon 门户.
+    /// Left 和 Right 已按从 current 行进到 next 的方向排列.
+    /// </summary>
+    internal NavMeshPortal GetDirectedPolygonPortal(int current, int next)
+    {
+        Portal portal = GetPolygonPortal(current, next);
+        return new NavMeshPortal(portal.Left, portal.Right);
+    }
+
     private int FindContainingTriangle(NavMeshPoint point)
     {
         Span<int> pendingNodes = stackalloc int[64];
@@ -1872,6 +1882,78 @@ public sealed class NavMesh
     internal uint GetPolygonFlags(int polygonIndex)
     {
         return m_Polygons[polygonIndex].Flags;
+    }
+
+    /// <summary>
+    /// 获取仅供同一程序集组合查询使用的 polygon 中心点.
+    /// </summary>
+    internal NavMeshPoint GetPolygonCenter(int polygonIndex)
+    {
+        return m_Polygons[polygonIndex].Center;
+    }
+
+    /// <summary>
+    /// 获取仅供同一程序集组合查询使用的相邻 polygon 数量.
+    /// </summary>
+    internal int GetPolygonNeighborCount(int polygonIndex)
+    {
+        return m_PolygonNeighbors[polygonIndex].Length;
+    }
+
+    /// <summary>
+    /// 获取指定相邻项的目标 polygon 索引.
+    /// </summary>
+    internal int GetPolygonNeighborIndex(int polygonIndex, int neighborIndex)
+    {
+        return m_PolygonNeighbors[polygonIndex][neighborIndex].TargetPolygon;
+    }
+
+    /// <summary>
+    /// 获取指定相邻项的 polygon 中心间距离.
+    /// </summary>
+    internal double GetPolygonNeighborCenterDistance(int polygonIndex, int neighborIndex)
+    {
+        return m_PolygonNeighbors[polygonIndex][neighborIndex].CenterDistance;
+    }
+
+    /// <summary>
+    /// 获取仅供同一程序集组合查询使用的跳跃边数量.
+    /// </summary>
+    internal int GetPolygonJumpCount(int polygonIndex)
+    {
+        return m_JumpEdges[polygonIndex].Length;
+    }
+
+    /// <summary>
+    /// 获取指定跳跃边的目标 polygon 索引.
+    /// </summary>
+    internal int GetPolygonJumpTarget(int polygonIndex, int jumpIndex)
+    {
+        return m_JumpEdges[polygonIndex][jumpIndex].TargetTriangle;
+    }
+
+    /// <summary>
+    /// 获取指定跳跃边的起点.
+    /// </summary>
+    internal NavMeshPoint GetPolygonJumpStart(int polygonIndex, int jumpIndex)
+    {
+        return m_JumpEdges[polygonIndex][jumpIndex].Start;
+    }
+
+    /// <summary>
+    /// 获取指定跳跃边的终点.
+    /// </summary>
+    internal NavMeshPoint GetPolygonJumpEnd(int polygonIndex, int jumpIndex)
+    {
+        return m_JumpEdges[polygonIndex][jumpIndex].End;
+    }
+
+    /// <summary>
+    /// 获取指定跳跃边的固定开销.
+    /// </summary>
+    internal double GetPolygonJumpFixedCost(int polygonIndex, int jumpIndex)
+    {
+        return m_JumpEdges[polygonIndex][jumpIndex].FixedCost;
     }
 
     /// <summary>
@@ -2317,3 +2399,8 @@ public sealed class NavMesh
         int Left,
         int Right);
 }
+
+/// <summary>
+/// 表示按行进方向定向的二维 polygon 门户.
+/// </summary>
+internal readonly record struct NavMeshPortal(NavMeshPoint Left, NavMeshPoint Right);

@@ -980,6 +980,349 @@ public sealed class NavMeshBinaryTests
 public sealed class TiledNavMeshTests
 {
     [Fact]
+    public void FindPath_WhenComparedWithCompatibilitySnapshot_ShouldMatchCosts()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = CreateSquareTile(0, 0);
+        Mesh second = CreateSquareTile(1, 0);
+        Mesh third = CreateSquareTile(0, 1);
+        Mesh fourth = CreateSquareTile(1, 1);
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second),
+            new NavMeshTileUpdate(new NavMeshTileId(0, 1), third),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 1), fourth)
+        ]);
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        Mesh compatibilitySnapshot = Assert.IsType<Mesh>(tiledNavMesh.Snapshot);
+        NavMeshPoint[] positions =
+        [
+            new NavMeshPoint(0.2, 0.2), new NavMeshPoint(1.7, 0.3), new NavMeshPoint(0.3, 1.7),
+            new NavMeshPoint(1.7, 1.6), new NavMeshPoint(0.8, 1.2)
+        ];
+
+        foreach (NavMeshPoint start in positions)
+        {
+            foreach (NavMeshPoint goal in positions)
+            {
+                TiledNavMeshPath? tiledPath = null;
+                Exception? exception = Record.Exception(() => tiledPath = snapshot.FindPath(start, goal));
+                Assert.True(exception is null, $"起点 {start}, 终点 {goal}: {exception}");
+                tiledPath = Assert.IsType<TiledNavMeshPath>(tiledPath);
+                NavMeshPath compatibilityPath = Assert.IsType<NavMeshPath>(compatibilitySnapshot.FindPath(start, goal));
+                Assert.Equal(compatibilityPath.SearchCost, tiledPath.SearchCost, 10);
+                Assert.Equal(compatibilityPath.TotalCost, tiledPath.TotalCost, 10);
+            }
+        }
+    }
+
+    [Fact]
+    public void FindPath_WhenLocationBelongsToReplacedTile_ShouldReturnNull()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh original = CreateSquareTile(0, 0);
+        tiledNavMesh.AddOrReplaceTile(new NavMeshTileId(0, 0), original);
+        TiledNavMeshSnapshot originalSnapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        Assert.True(originalSnapshot.TryFindLocation(new NavMeshPoint(0.5, 0.5), out TiledNavMeshLocation location));
+
+        tiledNavMesh.AddOrReplaceTile(new NavMeshTileId(0, 0), CreateSquareTile(0, 0));
+        TiledNavMeshSnapshot replacementSnapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+
+        Assert.Null(replacementSnapshot.FindPath(location, location));
+    }
+
+    [Fact]
+    public void SetCrossTileJumpConnections_WhenEndpointIsOutsideMesh_ShouldKeepPreviousSnapshot()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        tiledNavMesh.AddOrReplaceTile(new NavMeshTileId(0, 0), CreateSquareTile(0, 0));
+        TiledNavMeshSnapshot originalSnapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+
+        Assert.Throws<ArgumentException>(() => tiledNavMesh.SetCrossTileJumpConnections(
+            [new NavMeshJumpConnection(new NavMeshPoint(0.5, 0.5), new NavMeshPoint(3, 3), 1)]));
+
+        Assert.Same(originalSnapshot, tiledNavMesh.TileSnapshot);
+        Assert.Equal(0, tiledNavMesh.CrossTileJumpConnectionCount);
+    }
+
+    [Fact]
+    public void TryFindNearestLocation_WhenPointIsOutsideAllTiles_ShouldProjectToClosestTile()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(1, 0), new NavMeshPoint(1, 1), new NavMeshPoint(0, 1)],
+            [new NavMeshConvexPolygon([0, 1, 2, 3])]);
+        Mesh second = Mesh.Create(
+            [new NavMeshPoint(3, 0), new NavMeshPoint(4, 0), new NavMeshPoint(4, 1), new NavMeshPoint(3, 1)],
+            [new NavMeshConvexPolygon([0, 1, 2, 3])]);
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second)
+        ]);
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+
+        Assert.True(snapshot.TryFindNearestLocation(new NavMeshPoint(2.6, 0.5), out TiledNavMeshLocation location));
+
+        Assert.Equal(new NavMeshTileId(1, 0), location.TileId);
+        Assert.Equal(new NavMeshPoint(3, 0.5), location.Location.Position);
+    }
+
+    [Fact]
+    public void FindPath_WhenTilesAreConnectedByCrossTileJump_ShouldTraverseJump()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(0, 1)],
+            [new NavMeshConvexPolygon([0, 1, 2, 3])]);
+        Mesh second = Mesh.Create(
+            [new NavMeshPoint(4, 0), new NavMeshPoint(6, 0), new NavMeshPoint(6, 1), new NavMeshPoint(4, 1)],
+            [new NavMeshConvexPolygon([0, 1, 2, 3])]);
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second)
+        ]);
+
+        Assert.True(tiledNavMesh.SetCrossTileJumpConnections(
+            [new NavMeshJumpConnection(new NavMeshPoint(1.5, 0.25), new NavMeshPoint(4.5, 0.25), 5)]));
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        TiledNavMeshPath path = Assert.IsType<TiledNavMeshPath>(snapshot.FindPath(new NavMeshPoint(1.1, 0.25),
+            new NavMeshPoint(5.8, 0.25)));
+
+        Assert.Equal(1, tiledNavMesh.CrossTileJumpConnectionCount);
+        Assert.Equal([new NavMeshPoint(1.1, 0.25), new NavMeshPoint(1.5, 0.25), new NavMeshPoint(4.5, 0.25),
+            new NavMeshPoint(5.8, 0.25)], path.Points);
+        Assert.Equal(6.7, path.TotalCost, 10);
+        Assert.Single(path.Jumps);
+    }
+
+    [Fact]
+    public void FindPath_WhenTileContainsJump_ShouldKeepJumpEndpointsAndTraversal()
+    {
+        NavMeshPoint[] vertices =
+        [
+            new NavMeshPoint(0, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(0, 1),
+            new NavMeshPoint(4, 0), new NavMeshPoint(6, 0), new NavMeshPoint(6, 1), new NavMeshPoint(4, 1)
+        ];
+        Mesh tile = Mesh.Create(vertices,
+            [new NavMeshConvexPolygon([0, 1, 2, 3]), new NavMeshConvexPolygon([4, 5, 6, 7])],
+            [new NavMeshJumpConnection(new NavMeshPoint(1.5, 0.25), new NavMeshPoint(4.5, 0.25), 5)]);
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        tiledNavMesh.AddOrReplaceTile(new NavMeshTileId(0, 0), tile);
+
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        TiledNavMeshPath path = Assert.IsType<TiledNavMeshPath>(snapshot.FindPath(
+            new NavMeshPoint(1.1, 0.25), new NavMeshPoint(5.8, 0.25)));
+        Assert.Equal([new NavMeshPoint(1.1, 0.25), new NavMeshPoint(1.5, 0.25), new NavMeshPoint(4.5, 0.25),
+            new NavMeshPoint(5.8, 0.25)], path.Points);
+        TiledNavMeshJumpTraversal jump = Assert.Single(path.Jumps);
+        Assert.Equal(new NavMeshPoint(1.5, 0.25), jump.Start);
+        Assert.Equal(new NavMeshPoint(4.5, 0.25), jump.End);
+        Assert.Equal(5, jump.FixedCost);
+        Assert.Equal(6.7, path.TotalCost, 10);
+    }
+
+    [Fact]
+    public void TryFindCorridor_WhenTileContainsJump_ShouldTraverseJumpEdge()
+    {
+        NavMeshPoint[] vertices =
+        [
+            new NavMeshPoint(0, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(0, 1),
+            new NavMeshPoint(4, 0), new NavMeshPoint(6, 0), new NavMeshPoint(6, 1), new NavMeshPoint(4, 1)
+        ];
+        Mesh tile = Mesh.Create(vertices,
+            [new NavMeshConvexPolygon([0, 1, 2, 3]), new NavMeshConvexPolygon([4, 5, 6, 7])],
+            [new NavMeshJumpConnection(new NavMeshPoint(1.5, 0.25), new NavMeshPoint(4.5, 0.25), 5)]);
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        tiledNavMesh.AddOrReplaceTile(new NavMeshTileId(0, 0), tile);
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        TiledNavMeshQueryWorkspace workspace = new TiledNavMeshQueryWorkspace();
+        Span<TiledNavMeshPolygon> corridor = stackalloc TiledNavMeshPolygon[2];
+
+        bool found = snapshot.TryFindCorridor(new NavMeshPoint(1.1, 0.25), new NavMeshPoint(5.8, 0.25), workspace,
+            NavMeshQueryDefaults.Filter, NavMeshQueryDefaults.CostPolicy, corridor, out int corridorCount,
+            out double searchCost);
+
+        Assert.True(found);
+        Assert.Equal(2, corridorCount);
+        Assert.Equal(5 + 2 * Math.Sqrt(0.3125), searchCost, 10);
+    }
+
+    [Fact]
+    public void TryFindCorridor_WhenPointsAreInAdjacentTiles_ShouldTraverseSharedPortal()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(1, 0), new NavMeshPoint(1, 1), new NavMeshPoint(0, 1)],
+            [new NavMeshTriangle(0, 1, 2), new NavMeshTriangle(0, 2, 3)]);
+        Mesh second = Mesh.Create(
+            [new NavMeshPoint(1, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(1, 1)],
+            [new NavMeshTriangle(0, 1, 2), new NavMeshTriangle(0, 2, 3)]);
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second)
+        ]);
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        TiledNavMeshQueryWorkspace workspace = new TiledNavMeshQueryWorkspace();
+        Span<TiledNavMeshPolygon> corridor = stackalloc TiledNavMeshPolygon[2];
+
+        bool found = snapshot.TryFindCorridor(new NavMeshPoint(0.25, 0.25), new NavMeshPoint(1.25, 0.75), workspace,
+            NavMeshQueryDefaults.Filter, NavMeshQueryDefaults.CostPolicy, corridor, out int corridorCount,
+            out double searchCost);
+
+        Assert.True(found);
+        Assert.Equal(2, corridorCount);
+        Assert.Equal(new NavMeshTileId(0, 0), corridor[0].TileId);
+        Assert.Equal(new NavMeshTileId(1, 0), corridor[1].TileId);
+        Assert.True(searchCost > 0);
+    }
+
+    [Fact]
+    public void FindPath_WhenPointsAreInAdjacentTiles_ShouldUseCrossTileFunnel()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(1, 0), new NavMeshPoint(1, 1), new NavMeshPoint(0, 1)],
+            [new NavMeshTriangle(0, 1, 2), new NavMeshTriangle(0, 2, 3)]);
+        Mesh second = Mesh.Create(
+            [new NavMeshPoint(1, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(1, 1)],
+            [new NavMeshTriangle(0, 1, 2), new NavMeshTriangle(0, 2, 3)]);
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second)
+        ]);
+
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        TiledNavMeshPath path = Assert.IsType<TiledNavMeshPath>(snapshot.FindPath(
+            new NavMeshPoint(0.25, 0.25), new NavMeshPoint(1.75, 0.75)));
+        Assert.Equal([new NavMeshPoint(0.25, 0.25), new NavMeshPoint(1.75, 0.75)], path.Points);
+        Assert.Equal(new NavMeshTileId(0, 0), path.Corridor[0].TileId);
+        Assert.Equal(new NavMeshTileId(1, 0), path.Corridor[^1].TileId);
+        Assert.Empty(path.Jumps);
+        Assert.True(path.IsSearchOptimal);
+        Assert.Equal(1, path.HeuristicWeight);
+
+        TiledNavMeshPath weightedPath = Assert.IsType<TiledNavMeshPath>(snapshot.FindPath(new NavMeshPoint(0.25, 0.25),
+            new NavMeshPoint(1.75, 0.75), new TiledNavMeshQueryWorkspace(), NavMeshQueryDefaults.Filter,
+            NavMeshQueryDefaults.CostPolicy, new NavMeshQueryOptions { HeuristicWeight = 2 }));
+
+        Assert.False(weightedPath.IsSearchOptimal);
+        Assert.Equal(2, weightedPath.HeuristicWeight);
+
+        Assert.True(snapshot.TryFindLocation(new NavMeshPoint(0.25, 0.25), out TiledNavMeshLocation start));
+        Assert.True(snapshot.TryFindLocation(new NavMeshPoint(1.75, 0.75), out TiledNavMeshLocation goal));
+        TiledNavMeshPath cachedPath = Assert.IsType<TiledNavMeshPath>(snapshot.FindPath(start, goal));
+        Assert.Equal(path.Points, cachedPath.Points);
+    }
+
+    [Fact]
+    public void FindPath_WhenOneBoundaryEdgeOverlapsTwoEdges_ShouldTraversePartialPortals()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(1, 0), new NavMeshPoint(1, 2), new NavMeshPoint(0, 2)],
+            [new NavMeshConvexPolygon([0, 1, 2, 3])]);
+        Mesh second = Mesh.Create(
+            [
+                new NavMeshPoint(1, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(1, 1),
+                new NavMeshPoint(2, 2), new NavMeshPoint(1, 2)
+            ],
+            [new NavMeshConvexPolygon([0, 1, 2, 3]), new NavMeshConvexPolygon([3, 2, 4, 5])]);
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second)
+        ]);
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+
+        TiledNavMeshPath path = Assert.IsType<TiledNavMeshPath>(snapshot.FindPath(new NavMeshPoint(0.5, 1.5),
+            new NavMeshPoint(1.5, 1.5)));
+
+        Assert.Equal(2, snapshot.PortalCount);
+        Assert.Equal(new NavMeshTileId(0, 0), path.Corridor[0].TileId);
+        Assert.Equal(new NavMeshTileId(1, 0), path.Corridor[^1].TileId);
+        Assert.Equal([new NavMeshPoint(0.5, 1.5), new NavMeshPoint(1.5, 1.5)], path.Points);
+    }
+
+    [Fact]
+    public void FindPath_WhenCrossTileAreaHasHigherCost_ShouldCalculateGeometricTotalCost()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(1, 0), new NavMeshPoint(1, 1), new NavMeshPoint(0, 1)],
+            [new NavMeshConvexPolygon([0, 1, 2, 3])]);
+        Mesh second = Mesh.Create(
+            [new NavMeshPoint(1, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(1, 1)],
+            [new NavMeshConvexPolygon([0, 1, 2, 3], 9)]);
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second)
+        ]);
+        TiledNavMeshSnapshot snapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+
+        TiledNavMeshPath path = Assert.IsType<TiledNavMeshPath>(snapshot.FindPath(new NavMeshPoint(0.25, 0.5),
+            new NavMeshPoint(1.75, 0.5), new TiledNavMeshQueryWorkspace(), NavMeshQueryDefaults.Filter,
+            new HighCostAreaPolicy()));
+
+        Assert.Equal(100, path.SearchCost);
+        Assert.Equal(75.75, path.TotalCost, 10);
+    }
+
+    private static Mesh CreateSquareTile(int tileX, int tileY)
+    {
+        return Mesh.Create([
+                new NavMeshPoint(tileX, tileY), new NavMeshPoint(tileX + 1, tileY),
+                new NavMeshPoint(tileX + 1, tileY + 1), new NavMeshPoint(tileX, tileY + 1)
+            ],
+            [new NavMeshConvexPolygon([0, 1, 2, 3])]);
+    }
+
+    private sealed class HighCostAreaPolicy : INavMeshTraversalCostPolicy
+    {
+        public double MinimumMultiplier => 1;
+
+        public double GetMultiplier(int fromAreaId, int toAreaId) => toAreaId == 9 ? 100 : 1;
+    }
+
+    [Fact]
+    public void ApplyUpdates_WhenOneTileChanges_ShouldReuseUnchangedTileInTileSnapshot()
+    {
+        TiledNavMesh tiledNavMesh = new TiledNavMesh();
+        Mesh first = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(1, 0), new NavMeshPoint(1, 1), new NavMeshPoint(0, 1)],
+            [new NavMeshTriangle(0, 1, 2), new NavMeshTriangle(0, 2, 3)]);
+        Mesh second = Mesh.Create(
+            [new NavMeshPoint(1, 0), new NavMeshPoint(2, 0), new NavMeshPoint(2, 1), new NavMeshPoint(1, 1)],
+            [new NavMeshTriangle(0, 1, 2), new NavMeshTriangle(0, 2, 3)]);
+        Mesh replacement = Mesh.Create(
+            [new NavMeshPoint(0, 0), new NavMeshPoint(1, 0), new NavMeshPoint(1, 1), new NavMeshPoint(0, 1)],
+            [new NavMeshTriangle(0, 1, 2), new NavMeshTriangle(0, 2, 3)]);
+
+        tiledNavMesh.ApplyUpdates([
+            new NavMeshTileUpdate(new NavMeshTileId(0, 0), first),
+            new NavMeshTileUpdate(new NavMeshTileId(1, 0), second)
+        ]);
+        TiledNavMeshSnapshot initialSnapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        Span<TiledNavMeshPortal> portals = stackalloc TiledNavMeshPortal[1];
+
+        Assert.Equal(1, initialSnapshot.PortalCount);
+        Assert.Equal(1, initialSnapshot.CopyPortals(portals));
+        Assert.Equal(new NavMeshTileId(0, 0), portals[0].FirstTileId);
+        Assert.Equal(new NavMeshTileId(1, 0), portals[0].SecondTileId);
+        Assert.True(initialSnapshot.TryGetTile(new NavMeshTileId(1, 0), out Mesh? originalSecond));
+        Assert.Same(second, originalSecond);
+        Assert.True(tiledNavMesh.ApplyUpdates([new NavMeshTileUpdate(new NavMeshTileId(0, 0), replacement)]));
+
+        TiledNavMeshSnapshot updatedSnapshot = Assert.IsType<TiledNavMeshSnapshot>(tiledNavMesh.TileSnapshot);
+        Assert.Equal(2, updatedSnapshot.TileCount);
+        Assert.Equal(1, updatedSnapshot.PortalCount);
+        Assert.True(updatedSnapshot.TryGetTile(new NavMeshTileId(0, 0), out Mesh? updatedFirst));
+        Assert.True(updatedSnapshot.TryGetTile(new NavMeshTileId(1, 0), out Mesh? reusedSecond));
+        Assert.True(updatedSnapshot.TryFindLocation(new NavMeshPoint(1.5, 0.5), out TiledNavMeshLocation location));
+        Assert.Same(replacement, updatedFirst);
+        Assert.Same(second, reusedSecond);
+        Assert.Equal(new NavMeshTileId(1, 0), location.TileId);
+    }
+
+    [Fact]
     public void ApplyUpdates_WhenTilesShareEdge_ShouldCreateOneCrossTileSnapshot()
     {
         TiledNavMesh tiledNavMesh = new TiledNavMesh();
