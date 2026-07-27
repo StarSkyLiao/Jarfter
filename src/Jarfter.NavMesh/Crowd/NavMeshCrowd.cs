@@ -97,8 +97,10 @@ public sealed class NavMeshCrowd
     {
         ArgumentNullException.ThrowIfNull(filter);
         if (!m_Agents.TryGetValue(agentId, out Agent? agent)) return false;
-        NavMeshPath? path = m_NavMesh.FindPath(agent.Position, target, m_NavMesh.CreateQueryWorkspace(), filter,
-            NavMeshQueryDefaults.CostPolicy);
+        NavMeshPath? path = m_NavMesh.FindPath(
+            agent.Position, target, m_NavMesh.CreateQueryWorkspace(),
+            filter, NavMeshQueryDefaults.CostPolicy
+        );
         if (path is null) return false;
         agent.Target = target;
         agent.Path = path;
@@ -139,8 +141,10 @@ public sealed class NavMeshCrowd
 
     private bool RequestPath(Agent agent, NavMeshPoint target, INavMeshQueryFilter filter)
     {
-        NavMeshPath? path = m_NavMesh.FindPath(agent.Position, target, m_NavMesh.CreateQueryWorkspace(), filter,
-            NavMeshQueryDefaults.CostPolicy);
+        NavMeshPath? path = m_NavMesh.FindPath(
+            agent.Position, target, m_NavMesh.CreateQueryWorkspace(),
+            filter, NavMeshQueryDefaults.CostPolicy
+        );
         if (path is null) return false;
         agent.Target = target;
         agent.Path = path;
