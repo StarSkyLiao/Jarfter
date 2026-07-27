@@ -22,7 +22,7 @@ public static class TiledNavMeshRebuildComparisonRunTest
     /// </summary>
     public static void RunComparison()
     {
-        Benchmark.RunQuickTest(new BenchmarkOption(10) { TargetTime = TimeSpan.FromSeconds(0.15) }, [
+        Benchmark.RunQuickTest(new BenchmarkOption(5) { TargetTime = TimeSpan.FromSeconds(0.15) }, [
             new MethodWrapper<int>(RunSingleTileRebuild)
         ]);
     }
@@ -114,20 +114,13 @@ public static class TiledNavMeshRebuildComparisonRunTest
         return Mesh.Create(CollectionsMarshal.AsSpan(vertices), CollectionsMarshal.AsSpan(polygons));
     }
 
-    private sealed class RebuildBenchmarkState
+    private sealed class RebuildBenchmarkState(TiledNavMesh tiledNavMesh, Mesh originalTile, Mesh alternateTile)
     {
-        public RebuildBenchmarkState(TiledNavMesh tiledNavMesh, Mesh originalTile, Mesh alternateTile)
-        {
-            TiledNavMesh = tiledNavMesh;
-            OriginalTile = originalTile;
-            AlternateTile = alternateTile;
-        }
+        public TiledNavMesh TiledNavMesh { get; } = tiledNavMesh;
 
-        public TiledNavMesh TiledNavMesh { get; }
+        public Mesh OriginalTile { get; } = originalTile;
 
-        public Mesh OriginalTile { get; }
-
-        public Mesh AlternateTile { get; }
+        public Mesh AlternateTile { get; } = alternateTile;
 
         public bool UseAlternateTile { get; set; } = true;
     }
