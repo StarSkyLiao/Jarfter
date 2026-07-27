@@ -11,7 +11,7 @@ public sealed class NavMeshQueryWorkspace
     internal int[] Parents = [];
     internal int[] ParentJumps = [];
     internal NavMeshPoint[] Positions = [];
-    internal PriorityQueue<int, double> Open = new PriorityQueue<int, double>();
+    internal readonly PriorityQueue<int, double> Open = new PriorityQueue<int, double>();
     internal double[] JumpHeuristicCosts = [];
     internal bool[] JumpHeuristicClosed = [];
     private int[] m_QueryGenerations = [];

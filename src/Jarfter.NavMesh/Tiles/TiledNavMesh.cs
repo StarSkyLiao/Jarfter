@@ -411,12 +411,9 @@ public sealed class TiledNavMesh
 
     private readonly record struct PortalOwners(
         TiledNavMeshPortalEndpoint First,
-        TiledNavMeshPortalEndpoint Second,
-        byte Count)
+        TiledNavMeshPortalEndpoint Second = default,
+        byte Count = 1)
     {
-        public PortalOwners(TiledNavMeshPortalEndpoint first) : this(first, default, 1)
-        {
-        }
 
         public PortalOwners(TiledNavMeshPortalEndpoint first, TiledNavMeshPortalEndpoint second) : this(first, second,
             2)

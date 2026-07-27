@@ -1046,9 +1046,9 @@ public sealed class NavMesh
         int[] neighbors = new int[copiedTriangles.Length * 3];
         Array.Fill(neighbors, -1);
 
-        for (int vertexIndex = 0; vertexIndex < copiedVertices.Length; vertexIndex++)
+        foreach (NavMeshPoint t in copiedVertices)
         {
-            if (!copiedVertices[vertexIndex].IsFinite)
+            if (!t.IsFinite)
                 throw new ArgumentException("顶点必须为有限 double 坐标.", nameof(vertices));
         }
 
@@ -1236,8 +1236,7 @@ public sealed class NavMesh
             int[] corridorJumps = new int[corridor.Count];
             for (int index = 1; index < corridor.Count; index++)
                 corridorJumps[index] = workspace.ParentJumps[corridor[index]];
-            NavMeshJumpTraversal[] jumps;
-            NavMeshPoint[] points = BuildStraightPath(start, goal, corridor, corridorJumps, out jumps);
+            NavMeshPoint[] points = BuildStraightPath(start, goal, corridor, corridorJumps, out NavMeshJumpTraversal[] jumps);
             return new NavMeshPath(points, corridor.ToArray(), jumps, searchCost,
                 CalculatePathCost(points, jumps, costPolicy), heuristicWeight);
         }
@@ -1278,14 +1277,14 @@ public sealed class NavMesh
         if (startPolygon < 0 || goalPolygon < 0)
         {
             corridorCount = 0;
-            totalCost = default;
+            totalCost = 0;
             return false;
         }
         if (!filter.Pass(startPolygon, GetPolygonAreaId(startPolygon), GetPolygonFlags(startPolygon)) ||
             !filter.Pass(goalPolygon, GetPolygonAreaId(goalPolygon), GetPolygonFlags(goalPolygon)))
         {
             corridorCount = 0;
-            totalCost = default;
+            totalCost = 0;
             return false;
         }
 
@@ -1385,7 +1384,7 @@ public sealed class NavMesh
         }
 
         lastTriangle = -1;
-        totalCost = default;
+        totalCost = 0;
         return false;
     }
 
@@ -1467,12 +1466,12 @@ public sealed class NavMesh
                 NavMeshPoint apex = start;
                 NavMeshPoint left = portals[0].Left;
                 NavMeshPoint right = portals[0].Right;
-                int apexIndex;
                 int leftIndex = 0;
                 int rightIndex = 0;
                 for (int index = 1; index < portals.Count; index++)
                 {
                     Portal portal = portals[index];
+                    int apexIndex;
                     if (NavMeshPoint.Cross(apex, right, portal.Right) <= 0)
                     {
                         if (apex == right || NavMeshPoint.Cross(apex, left, portal.Right) > 0)
@@ -1646,7 +1645,7 @@ public sealed class NavMesh
         double cross = rayX * edgeY - rayY * edgeX;
         if (Math.Abs(cross) < 1e-12)
         {
-            t = default;
+            t = 0;
             return false;
         }
 
@@ -1654,7 +1653,7 @@ public sealed class NavMesh
         double offsetY = edgeStart.Y - rayStart.Y;
         t = (offsetX * edgeY - offsetY * edgeX) / cross;
         double u = (offsetX * rayY - offsetY * rayX) / cross;
-        return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+        return t is >= 0 and <= 1 && u is >= 0 and <= 1;
     }
 
     private Portal GetPolygonPortal(int current, int next)

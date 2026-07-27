@@ -42,8 +42,8 @@ public static class NavMeshBuilder
             // 从最右侧障碍物开始桥接, 可避免后续桥接穿越已合并的障碍物环.
             obstacles.Sort(static (left, right) =>
                 GetRightmostX(right.AsSpan()).CompareTo(GetRightmostX(left.AsSpan())));
-            for (int obstacleIndex = 0; obstacleIndex < obstacles.Count; obstacleIndex++)
-                MergeHole(vertices, obstacles[obstacleIndex].AsSpan(), effectiveOptions.Tolerance);
+            foreach (NavMeshPolygon polygon in obstacles)
+                MergeHole(vertices, polygon.AsSpan(), effectiveOptions.Tolerance);
             return Triangulate(CollectionsMarshal.AsSpan(vertices),
                 effectiveOptions.Tolerance * effectiveOptions.Tolerance, effectiveOptions.AreaId,
                 effectiveOptions.Flags);
@@ -102,9 +102,8 @@ public static class NavMeshBuilder
         NavMeshPoint third = vertices[next];
         if (NavMeshPoint.Cross(first, second, third) <= areaTolerance) return false;
 
-        for (int index = 0; index < remaining.Count; index++)
+        foreach (int candidate in remaining)
         {
-            int candidate = remaining[index];
             if (candidate == previous || candidate == current || candidate == next) continue;
             NavMeshPoint candidatePoint = vertices[candidate];
             if (candidatePoint == first || candidatePoint == second || candidatePoint == third) continue;

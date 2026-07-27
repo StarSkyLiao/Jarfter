@@ -11,7 +11,7 @@ public sealed class TiledNavMeshQueryWorkspace
     internal double[] Costs = [];
     internal int[] Parents = [];
     internal TiledNavMeshTransition[] ParentTransitions = [];
-    internal PriorityQueue<int, double> Open = new PriorityQueue<int, double>();
+    internal readonly PriorityQueue<int, double> Open = new PriorityQueue<int, double>();
     internal double[] JumpHeuristicCosts = [];
     internal bool[] JumpHeuristicClosed = [];
     private int[] m_Generations = [];

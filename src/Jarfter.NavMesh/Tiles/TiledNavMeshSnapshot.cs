@@ -227,7 +227,7 @@ public sealed class TiledNavMeshSnapshot
             !TryFindLocation(goal, filter, out TiledNavMeshLocation goalLocation))
         {
             corridorCount = 0;
-            searchCost = default;
+            searchCost = 0;
             return false;
         }
 
@@ -396,7 +396,7 @@ public sealed class TiledNavMeshSnapshot
 
     private bool TryResolveLocation(TiledNavMeshLocation location, INavMeshQueryFilter filter, out int node)
     {
-        node = default;
+        node = 0;
         if (!location.Location.Position.IsFinite) return false;
         int tileIndex = FindTileIndex(location.TileId);
         if (tileIndex < 0) return false;
@@ -511,7 +511,7 @@ public sealed class TiledNavMeshSnapshot
                     heuristicWeight, heuristicJumpCount,
                     currentTile.GetPolygonNeighborCenterDistance(polygonIndex, neighborIndex), currentAreaId, workspace,
                     filter, costPolicy, new TiledNavMeshTransition(TiledNavMeshTransitionKind.Portal, portal.Left,
-                        portal.Right, default, default, default));
+                        portal.Right, default, default, 0));
             }
 
             for (int linkIndex = portalGraph.Offsets[currentNode]; linkIndex < portalGraph.Offsets[currentNode + 1];
@@ -560,7 +560,7 @@ public sealed class TiledNavMeshSnapshot
             }
         }
 
-        searchCost = default;
+        searchCost = 0;
         return false;
     }
 
@@ -890,7 +890,7 @@ public sealed class TiledNavMeshSnapshot
         double cross = rayX * edgeY - rayY * edgeX;
         if (Math.Abs(cross) < 1e-12)
         {
-            t = default;
+            t = 0;
             return false;
         }
 
@@ -898,7 +898,7 @@ public sealed class TiledNavMeshSnapshot
         double offsetY = edgeStart.Y - rayStart.Y;
         t = (offsetX * edgeY - offsetY * edgeX) / cross;
         double u = (offsetX * rayY - offsetY * rayX) / cross;
-        return t >= 0d && t <= 1d && u >= 0d && u <= 1d;
+        return t is >= 0d and <= 1d && u is >= 0d and <= 1d;
     }
 
     private static void AppendFunnelPath(List<NavMeshPoint> destination, NavMeshPoint start, NavMeshPoint goal,
@@ -1044,7 +1044,7 @@ public sealed class TiledNavMeshSnapshot
                     firstToSecond.Right,
                     default,
                     default,
-                    default));
+                    0));
             links[writePositions[second]++] = new TiledPortalLink(
                 first,
                 centerDistance,
@@ -1054,7 +1054,7 @@ public sealed class TiledNavMeshSnapshot
                     secondToFirst.Right,
                     default,
                     default,
-                    default));
+                    0));
         }
 
         return new TiledPortalGraph(offsets, links);
@@ -1162,30 +1162,20 @@ public sealed class TiledNavMeshSnapshot
         return y != 0 ? y : left.X.CompareTo(right.X);
     }
 
-    private sealed class TiledPortalGraph
+    private sealed class TiledPortalGraph(int[] offsets, TiledPortalLink[] links)
     {
-        public TiledPortalGraph(int[] offsets, TiledPortalLink[] links)
-        {
-            Offsets = offsets;
-            Links = links;
-        }
 
-        public int[] Offsets { get; }
+        public int[] Offsets { get; } = offsets;
 
-        public TiledPortalLink[] Links { get; }
+        public TiledPortalLink[] Links { get; } = links;
     }
 
-    private sealed class TiledCrossTileJumpGraph
+    private sealed class TiledCrossTileJumpGraph(int[] offsets, TiledCrossTileJump[] jumps)
     {
-        public TiledCrossTileJumpGraph(int[] offsets, TiledCrossTileJump[] jumps)
-        {
-            Offsets = offsets;
-            Jumps = jumps;
-        }
 
-        public int[] Offsets { get; }
+        public int[] Offsets { get; } = offsets;
 
-        public TiledCrossTileJump[] Jumps { get; }
+        public TiledCrossTileJump[] Jumps { get; } = jumps;
     }
 
     private readonly record struct TiledPortalLink(
@@ -1205,23 +1195,15 @@ public sealed class TiledNavMeshSnapshot
         public bool Contains(NavMeshPoint point) => Bounds.Contains(point);
     }
 
-    private sealed class TileCenterComparer : IComparer<int>
+    private sealed class TileCenterComparer(TiledNavMeshTile[] tiles, bool splitX) : IComparer<int>
     {
-        private readonly TiledNavMeshTile[] m_Tiles;
-        private readonly bool m_SplitX;
-
-        public TileCenterComparer(TiledNavMeshTile[] tiles, bool splitX)
-        {
-            m_Tiles = tiles;
-            m_SplitX = splitX;
-        }
 
         public int Compare(int left, int right)
         {
-            TiledTileBounds leftBounds = m_Tiles[left].Bounds;
-            TiledTileBounds rightBounds = m_Tiles[right].Bounds;
-            double leftCenter = m_SplitX ? leftBounds.CenterX : leftBounds.CenterY;
-            double rightCenter = m_SplitX ? rightBounds.CenterX : rightBounds.CenterY;
+            TiledTileBounds leftBounds = tiles[left].Bounds;
+            TiledTileBounds rightBounds = tiles[right].Bounds;
+            double leftCenter = splitX ? leftBounds.CenterX : leftBounds.CenterY;
+            double rightCenter = splitX ? rightBounds.CenterX : rightBounds.CenterY;
             int comparison = leftCenter.CompareTo(rightCenter);
             return comparison != 0 ? comparison : left.CompareTo(right);
         }
