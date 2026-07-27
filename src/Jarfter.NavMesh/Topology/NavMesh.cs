@@ -1046,10 +1046,10 @@ public sealed class NavMesh
         int[] neighbors = new int[copiedTriangles.Length * 3];
         Array.Fill(neighbors, -1);
 
-        foreach (NavMeshPoint t in copiedVertices)
+        foreach (NavMeshPoint navMeshPoint in copiedVertices)
         {
-            if (!t.IsFinite)
-                throw new ArgumentException("顶点必须为有限 double 坐标.", nameof(vertices));
+            if (navMeshPoint.IsFinite) continue;
+            throw new ArgumentException("顶点必须为有限 double 坐标.", nameof(vertices));
         }
 
         for (int triangleIndex = 0; triangleIndex < copiedTriangles.Length; triangleIndex++)
