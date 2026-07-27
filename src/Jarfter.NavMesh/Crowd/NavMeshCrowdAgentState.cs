@@ -9,4 +9,5 @@ public readonly record struct NavMeshCrowdAgentState(
     int Id,
     NavMeshPoint Position,
     NavMeshPoint? Target,
-    bool HasPath);
+    bool HasPath
+);
