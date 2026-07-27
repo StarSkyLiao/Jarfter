@@ -9,4 +9,5 @@ namespace Jarfter.NavMesh.Query;
 public readonly record struct NavMeshLocalPolygon(
     NavMeshPolygonRef PolygonRef,
     NavMeshPolygonRef ParentPolygonRef,
-    double Cost);
+    double Cost
+);

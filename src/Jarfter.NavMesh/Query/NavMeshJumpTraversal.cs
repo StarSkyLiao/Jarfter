@@ -9,4 +9,5 @@ public readonly record struct NavMeshJumpTraversal(
     int ConnectionIndex,
     NavMeshPoint Start,
     NavMeshPoint End,
-    double FixedCost);
+    double FixedCost
+);
