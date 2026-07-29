@@ -11,7 +11,7 @@ namespace Jarfter.Core.Collections.Generic;
 public class SkipList<T> : IList<T>, ICollection where T : IComparable<T>
 {
     // ReSharper disable once StaticMemberInGenericType
-    private static readonly Random m_Random = new Random();
+    private static readonly Random s_Random = new Random();
     private static readonly SkipListNode[] s_UpdateArray = new SkipListNode[MaxLevel];
 
     /// <summary>
@@ -573,7 +573,7 @@ public class SkipList<T> : IList<T>, ICollection where T : IComparable<T>
     {
         int level = 1;
         while (level < MaxLevel &&
-               (m_Random.Next(0, short.MaxValue) & ushort.MaxValue) < Probability * ushort.MaxValue
+               (s_Random.Next(0, short.MaxValue) & ushort.MaxValue) < Probability * ushort.MaxValue
               ) ++level;
         return level;
     }
