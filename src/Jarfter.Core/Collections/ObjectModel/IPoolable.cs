@@ -13,12 +13,12 @@ public interface IPoolable<T> : IReusable where T : class, IPoolable<T>
     /// 创建一个尚未被租借过的对象池对象.
     /// </summary>
     /// <returns>新创建的对象池对象.</returns>
-    internal static abstract T CreatePooled();
+    public static abstract T CreatePooled();
 
     /// <summary>
     /// 获取或设置当前对象所属的对象池.
     /// </summary>
-    internal ConcurrentStack<T>? SourcePool { get; set; }
+    public ConcurrentStack<T>? SourcePool { get; set; }
 
     /// <summary>
     /// 将当前对象归还到其所属的对象池.
