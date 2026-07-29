@@ -1,4 +1,6 @@
 using System.Diagnostics.Contracts;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Jarfter.Core.Collections.Signals;
 
@@ -19,12 +21,13 @@ public class SignalController
     /// <summary>
     /// 查找类型为 T 的信号并添加一个委托.
     /// 找不到指定信号时会直接返回.
-    /// 注意: 该信号为 C# 的委托.
+    /// 注意: 该信号为 C# 的委托, 而非 Godot 的信号
     /// </summary>
     public void AddToSignal<T>(T signal) where T : Delegate
     {
-        if (!m_Signals.TryGetValue(typeof(T), out Delegate? value)) return;
-        m_Signals[typeof(T)] = Delegate.Combine(value, signal);
+        ref Delegate value = ref CollectionsMarshal.GetValueRefOrNullRef(m_Signals, typeof(T));
+        if (Unsafe.IsNullRef(ref value)) return;
+        value = Delegate.Combine(value, signal);
     }
 
     /// <summary>
@@ -34,8 +37,21 @@ public class SignalController
     /// </summary>
     public void AddToSignal(Type type, Delegate signal)
     {
-        if (!m_Signals.TryGetValue(type, out Delegate? value)) return;
-        m_Signals[type] = Delegate.Combine(value, signal);
+        ref Delegate value = ref CollectionsMarshal.GetValueRefOrNullRef(m_Signals, type);
+        if (Unsafe.IsNullRef(ref value)) return;
+        value = Delegate.Combine(value, signal);
+    }
+
+    /// <summary>
+    /// 注册一个类型为 T, 名称为 T 类型名的信号.
+    /// 如果信号已经被注册过, 则无事发生.
+    /// 注意: 该信号为 C# 的委托, 而非 Godot 的信号
+    /// </summary>
+    public void AddOrRegisterSignal<T>(T signal) where T : Delegate
+    {
+        Type type = typeof(T);
+        ref Delegate? value = ref CollectionsMarshal.GetValueRefOrAddDefault(m_Signals, type, out bool exists);
+        value = exists ? Delegate.Combine(value, signal) : signal;
     }
 
     /// <summary>
@@ -45,8 +61,9 @@ public class SignalController
     /// </summary>
     public void RemoveSignal<T>(T signal) where T : Delegate
     {
-        if (!m_Signals.TryGetValue(typeof(T), out Delegate? value)) return;
-        m_Signals[typeof(T)] = Delegate.Remove(value, signal)!;
+        ref Delegate value = ref CollectionsMarshal.GetValueRefOrNullRef(m_Signals, typeof(T));
+        if (Unsafe.IsNullRef(ref value)) return;
+        value = Delegate.Remove(value, signal)!;
     }
 
     /// <summary>
@@ -56,8 +73,9 @@ public class SignalController
     /// </summary>
     public void RemoveSignal(Type type, Delegate signal)
     {
-        if (!m_Signals.TryGetValue(type, out Delegate? value)) return;
-        m_Signals[type] = Delegate.Remove(value, signal)!;
+        ref Delegate value = ref CollectionsMarshal.GetValueRefOrNullRef(m_Signals, type);
+        if (Unsafe.IsNullRef(ref value)) return;
+        value = Delegate.Remove(value, signal)!;
     }
 
     /// <summary>
