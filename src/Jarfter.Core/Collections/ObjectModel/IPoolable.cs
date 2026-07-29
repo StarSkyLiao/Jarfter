@@ -23,5 +23,9 @@ public interface IPoolable<T> : IReusable where T : class, IPoolable<T>
     /// <summary>
     /// 将当前对象归还到其所属的对象池.
     /// </summary>
-    void IReusable.Release() => SourcePool?.Push((T)this);
+    void IReusable.Release()
+    {
+        SourcePool?.Push((T)this);
+        SourcePool = null;
+    }
 }
